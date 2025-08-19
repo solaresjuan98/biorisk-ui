@@ -419,17 +419,17 @@ const BioRiskAI = () => {
                         </h1>
                         <p className="text-xl text-blue-200 mb-2">Análisis Predictivo + Biométrico</p>
                         <div className="flex items-center justify-center gap-4 text-sm text-blue-300">
-                            <div className="flex items-center gap-2">
+                            {/* <div className="flex items-center gap-2">
                                 <Sparkles className="w-4 h-4" />
                                 <span>IA Generativa</span>
-                            </div>
+                            </div> */}
                             <div className="flex items-center gap-2">
                                 <Target className="w-4 h-4" />
                                 <span>Predicción Automática</span>
                             </div>
                             <div className="flex items-center gap-2">
                                 <Shield className="w-4 h-4" />
-                                <span>Análisis Biométrico</span>
+                                <span>Análisis Demógrafico y Biométrico</span>
                             </div>
                         </div>
                     </div>
@@ -437,7 +437,7 @@ const BioRiskAI = () => {
 
                 {/* Búsqueda con IA Enhancement */}
                 <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-8">
-                    <div className="flex gap-4 max-w-3xl mx-auto">
+                    <div className="flex flex-col md:flex-row gap-4 max-w-3xl mx-auto">
                         <div className="relative flex-1">
                             <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
                                 <Bot className="w-5 h-5 text-blue-600" />
@@ -451,10 +451,11 @@ const BioRiskAI = () => {
                                 onKeyPress={(e) => e.key === 'Enter' && handleBuscar()}
                             />
                         </div>
+
                         <button
                             onClick={handleBuscar}
                             disabled={loading || !cui.trim()}
-                            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl font-semibold flex items-center gap-3 transition-all duration-300 shadow-lg hover:shadow-xl"
+                            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-300 shadow-lg hover:shadow-xl"
                         >
                             {loading ? (
                                 <>
@@ -469,7 +470,7 @@ const BioRiskAI = () => {
                             ) : (
                                 <>
                                     <Brain className="w-5 h-5" />
-                                    Analizar
+                                    Analizar con IA
                                 </>
                             )}
                         </button>
@@ -486,7 +487,7 @@ const BioRiskAI = () => {
                                     </div>
                                     <h3 className="text-gray-900 font-semibold">Sistema de IA Procesando</h3>
                                 </div>
-                                
+
                                 <div className="space-y-3">
                                     {aiProcessingSteps.map((step, index) => (
                                         <div key={index} className="flex items-center gap-3 text-gray-700">
@@ -494,7 +495,7 @@ const BioRiskAI = () => {
                                             <span className="text-sm">{step}</span>
                                         </div>
                                     ))}
-                                    
+
                                     {processingStep && (
                                         <div className="flex items-center gap-3 text-gray-900">
                                             <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
@@ -504,7 +505,7 @@ const BioRiskAI = () => {
                                 </div>
 
                                 <div className="mt-4 bg-gray-200 rounded-lg h-2">
-                                    <div 
+                                    <div
                                         className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-lg transition-all duration-300"
                                         style={{ width: `${(currentStepIndex / processingSteps.length) * 100}%` }}
                                     ></div>
@@ -647,7 +648,7 @@ const BioRiskAI = () => {
                                         <div className="bg-slate-50 rounded-lg p-6">
                                             <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
                                                 <User className="w-5 h-5 text-blue-600" />
-                                                Información Personal Validada por IA
+                                                Información Personal
                                             </h3>
                                             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
                                                 <div>
@@ -752,14 +753,14 @@ const BioRiskAI = () => {
                                                         </span>
                                                     </div>
                                                     <p className="text-sm font-semibold mb-3">{insight.message}</p>
-                                                    
+
                                                     {insight.processing_step && (
                                                         <p className="text-xs opacity-70 mb-3 flex items-center gap-1">
                                                             <Cpu className="w-3 h-3" />
                                                             Proceso IA: {insight.processing_step}
                                                         </p>
                                                     )}
-                                                    
+
                                                     <div className="flex items-center gap-3">
                                                         <span className="text-xs opacity-80 flex items-center gap-1">
                                                             <Target className="w-3 h-3" />

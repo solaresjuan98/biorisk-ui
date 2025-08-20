@@ -599,7 +599,7 @@ const BioRiskAI = () => {
                         <button
                             type="button"
                             onClick={openCamera}
-                            className="px-4 py-4 bg-white border border-gray-300 hover:border-blue-400 text-gray-900 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow md:min-w-44"
+                            className="cursor-pointer px-4 py-4 bg-white border border-gray-300 hover:border-blue-400 text-gray-900 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow md:min-w-44"
                             title="Tomar foto (opcional)"
                         >
                             <Camera className="w-5 h-5" />
@@ -610,7 +610,7 @@ const BioRiskAI = () => {
                         <button
                             onClick={handleBuscar}
                             disabled={loading || !cui.trim()}
-                            className="px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-300 shadow-lg hover:shadow-xl"
+                            className="cursor-pointer px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-300 shadow-lg hover:shadow-xl"
                         >
                             {loading ? (
                                 <>

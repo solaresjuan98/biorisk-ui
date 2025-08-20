@@ -1,72 +1,74 @@
 import { useState, useEffect, useRef } from 'react';
 import { Brain, CheckCircle, XCircle, Camera, Clock, TrendingUp, AlertCircle, Zap, Eye, BarChart3, Users, GraduationCap, Briefcase, MapPin, DollarSign, Shield, User, Calendar, Cpu, X, Sparkles, Bot, Target, Network, Activity } from 'lucide-react';
+import { getPrediction } from '@/utils/getPrediction';
+import type { PredictionResponse } from '@/interfaces';
 
 // Interfaces para los datos completos
-interface DataRenap {
-    CUI: string;
-    PRIMER_NOMBRE: string;
-    SEGUNDO_NOMBRE: string;
-    PRIMER_APELLIDO: string;
-    SEGUNDO_APELLIDO: string;
-    FECHA_NACIMIENTO: string;
-    GENERO: string;
-    ESTADO_CIVIL: string;
-    NACIONALIDAD: string;
-    PAIS_NACIMIENTO: string;
-    DEPTO_NACIMIENTO: string;
-    MUNI_NACIMIENTO: string;
-    VECINDAD: string;
-    FECHA_VENCIMIENTO: string;
-    OCUPACION: string;
-    FOTO: string;
-}
+// interface DataRenap {
+//     CUI: string;
+//     PRIMER_NOMBRE: string;
+//     SEGUNDO_NOMBRE: string;
+//     PRIMER_APELLIDO: string;
+//     SEGUNDO_APELLIDO: string;
+//     FECHA_NACIMIENTO: string;
+//     GENERO: string;
+//     ESTADO_CIVIL: string;
+//     NACIONALIDAD: string;
+//     PAIS_NACIMIENTO: string;
+//     DEPTO_NACIMIENTO: string;
+//     MUNI_NACIMIENTO: string;
+//     VECINDAD: string;
+//     FECHA_VENCIMIENTO: string;
+//     OCUPACION: string;
+//     FOTO: string;
+// }
 
-interface DemographicScores {
-    estabilidad_economica: number;
-    riesgo_ocupacional: number;
-    carga_familiar: number;
-    madurez_edad: number;
-    nivel_educativo: number;
-    historial_crediticio: number;
-    ubicacion_geografica: number;
-    score_demografico_total: number;
-}
+// interface DemographicScores {
+//     estabilidad_economica: number;
+//     riesgo_ocupacional: number;
+//     carga_familiar: number;
+//     madurez_edad: number;
+//     nivel_educativo: number;
+//     historial_crediticio: number;
+//     ubicacion_geografica: number;
+//     score_demografico_total: number;
+// }
 
-interface FeatureContributions {
-    edad: number;
-    ingresos: number;
-    ocupacion: number;
-    historial_crediticio: number;
-    ubicacion: number;
-    [key: string]: number;
-}
+// interface FeatureContributions {
+//     edad: number;
+//     ingresos: number;
+//     ocupacion: number;
+//     historial_crediticio: number;
+//     ubicacion: number;
+//     [key: string]: number;
+// }
 
-interface ModelMetadata {
-    model_type: string;
-    threshold: number;
-    features_count: number;
-    features_head: string[];
-    loaded_from: string;
-}
+// interface ModelMetadata {
+//     model_type: string;
+//     threshold: number;
+//     features_count: number;
+//     features_head: string[];
+//     loaded_from: string;
+// }
 
-interface DatosAnalisis {
-    data_renap: DataRenap;
-    prediction: string;
-    probability_mora: number;
-    confidence_level: string;
-    risk_category: string;
-    demographic_scores: DemographicScores;
-    feature_contributions: FeatureContributions;
-    model_metadata: ModelMetadata;
-    processing_timestamp: string;
-    success: boolean;
-    message: string;
-}
+// interface DatosAnalisis {
+//     renap_data: DataRenap;
+//     prediction: string;
+//     probability_mora: number;
+//     confidence_level: string;
+//     risk_category: string;
+//     demographic_scores: DemographicScores;
+//     feature_contributions: FeatureContributions;
+//     model_metadata: ModelMetadata;
+//     processing_timestamp: string;
+//     success: boolean;
+//     message: string;
+// }
 
-interface ResultadosResponse {
-    cui_recibido: string;
-    resultados: DatosAnalisis;
-}
+// interface ResultadosResponse {
+//     cui_recibido: string;
+//     resultados: DatosAnalisis;
+// }
 
 interface AIInsight {
     id: number;
@@ -81,7 +83,7 @@ interface AIInsight {
 
 const BioRiskAI = () => {
     const [cui, setCui] = useState('');
-    const [resultados, setResultados] = useState<ResultadosResponse | null>(null);
+    const [resultados, setResultados] = useState<PredictionResponse | null>(null);
     const [loading, setLoading] = useState(false);
     const [processingStep, setProcessingStep] = useState('');
     const [smartInsights, setSmartInsights] = useState<AIInsight[]>([]);
@@ -174,11 +176,11 @@ const BioRiskAI = () => {
     ];
 
     // Generación de insights inteligentes con IA
-    const generateAIInsights = (data: DatosAnalisis) => {
+    const generateAIInsights = (data: PredictionResponse) => {
         const insights: AIInsight[] = [];
 
         // Análisis de edad y perfil con IA
-        const edad = calcularEdad(data.data_renap.FECHA_NACIMIENTO);
+        const edad = calcularEdad(data.renap_data.fecha_nacimiento_renap);
         if (edad < 25) {
             insights.push({
                 id: 1,
@@ -193,7 +195,7 @@ const BioRiskAI = () => {
         }
 
         // Análisis ocupacional con IA
-        if (data.data_renap.OCUPACION === 'ESTUDIANTE') {
+        if (data.renap_data.ocupacion_renap === 'ESTUDIANTE') {
             insights.push({
                 id: 2,
                 type: 'warning',
@@ -333,75 +335,12 @@ const BioRiskAI = () => {
         setCurrentStepIndex(0);
 
         // Simular procesamiento completo
-        setTimeout(() => {
-            const datosDemo: ResultadosResponse = {
-                "cui_recibido": cui,
-                "resultados": {
-                    "data_renap": {
-                        "CUI": cui,
-                        "PRIMER_NOMBRE": "JUAN",
-                        "SEGUNDO_NOMBRE": "ANTONIO",
-                        "PRIMER_APELLIDO": "SOLARES",
-                        "SEGUNDO_APELLIDO": "SAMAYOA",
-                        "FECHA_NACIMIENTO": "16/12/1998",
-                        "GENERO": "M",
-                        "ESTADO_CIVIL": "S",
-                        "NACIONALIDAD": "GUATEMALA",
-                        "PAIS_NACIMIENTO": "GUATEMALA",
-                        "DEPTO_NACIMIENTO": "GUATEMALA",
-                        "MUNI_NACIMIENTO": "GUATEMALA",
-                        "VECINDAD": "GUATEMALA,VILLA NUEVA",
-                        "FECHA_VENCIMIENTO": "21/05/2027",
-                        "OCUPACION": "ESTUDIANTE",
-                        "FOTO": "https://renap-dpi.s3.amazonaws.com/2996110000101_20250709.png"
-                    },
-                    "prediction": "NO_MORA",
-                    "probability_mora": 0.5891,
-                    "confidence_level": "Medio",
-                    "risk_category": "Medio",
-                    "demographic_scores": {
-                        "estabilidad_economica": 0.168,
-                        "riesgo_ocupacional": 0.571,
-                        "carga_familiar": 0.667,
-                        "madurez_edad": 0.3,
-                        "nivel_educativo": 0.5,
-                        "historial_crediticio": 0.5,
-                        "ubicacion_geografica": 0.5,
-                        "score_demografico_total": 0.458
-                    },
-                    "feature_contributions": {
-                        "edad": 0.045,
-                        "ingresos": 0.076,
-                        "ocupacion": 0.069,
-                        "historial_crediticio": 0.07,
-                        "ubicacion": 0.04
-                    },
-                    "model_metadata": {
-                        "model_type": "GradientBoostingClassifier",
-                        "threshold": 0.6,
-                        "features_count": 33,
-                        "features_head": [
-                            "Edad_Real",
-                            "Es_Masculino",
-                            "Es_Soltero",
-                            "Es_Casado",
-                            "Score_Educacion",
-                            "Log_Ingresos",
-                            "Vivienda_Propia",
-                            "Numero_Dependientes",
-                            "Score_Riesgo_Ocupacion",
-                            "Riesgo_Regional"
-                        ],
-                        "loaded_from": "modelo_mora_mejorado_20250813_221934.joblib"
-                    },
-                    "processing_timestamp": new Date().toISOString(),
-                    "success": true,
-                    "message": "Análisis de IA completado exitosamente"
-                }
-            };
+        setTimeout(async () => {
+
+            const datosDemo = await getPrediction({ dpi: cui});
 
             setResultados(datosDemo);
-            const insights = generateAIInsights(datosDemo.resultados);
+            const insights = generateAIInsights(datosDemo);
 
             // Mostrar insights progresivamente con efecto de IA
             insights.forEach((insight, index) => {
@@ -415,7 +354,7 @@ const BioRiskAI = () => {
         }, 7000);
     };
 
-    const data = resultados?.resultados;
+    const data = resultados;
 
     const getDecisionColor = (decision: string) => {
         return decision === "NO_MORA" ? "text-emerald-600" : "text-red-600";
@@ -544,7 +483,7 @@ const BioRiskAI = () => {
                 {/* Header con emphasis en IA */}
                 <div className="text-center py-8 relative">
                     {/* agregar /20 para opacidad */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-3xl"></div>
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-red-600 text-white rounded-3xl"></div>
                     <div className="relative">
                         <div className="flex items-center justify-center gap-3 mb-4">
                             <div className="p-3 bg-gradient-to-r from-blue-600 via-purple-600 to-purple-600 rounded-2xl">
@@ -610,7 +549,7 @@ const BioRiskAI = () => {
                         <button
                             onClick={handleBuscar}
                             disabled={loading || !cui.trim()}
-                            className="cursor-pointer px-8 py-4 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-300 shadow-lg hover:shadow-xl"
+                            className="cursor-pointer px-8 py-4 bg-gradient-to-r from-blue-600 to-red-600 hover:from-blue-700 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-300 shadow-lg hover:shadow-xl"
                         >
                             {loading ? (
                                 <>
@@ -781,14 +720,14 @@ const BioRiskAI = () => {
                         <div className="space-y-6">
                             {/* Panel Principal con Foto */}
                             <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 overflow-hidden">
-                                <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white p-6">
+                                <div className="bg-gradient-to-r from-blue-600  to-red-600 text-white p-6">
                                     <div className="flex items-center justify-between">
                                         <div>
                                             <h2 className="text-3xl font-bold mb-2 flex items-center gap-3">
                                                 {/* <Sparkles className="w-8 h-8" /> */}
                                                 Análisis Completo de IA
                                             </h2>
-                                            <p className="opacity-90 text-lg">CUI: {data.data_renap.CUI}</p>
+                                            <p className="opacity-90 text-lg">CUI: {data.renap_data.dpi}</p>
                                             <p className="opacity-75 text-sm flex items-center gap-2 mt-1">
                                                 <Clock className="w-4 h-4" />
                                                 {new Date(data.processing_timestamp).toLocaleString('es-GT')}
@@ -813,7 +752,7 @@ const BioRiskAI = () => {
                                         <div className="lg:col-span-1">
                                             <div className="relative w-full overflow-hidden rounded-xl shadow-lg border border-gray-200">
                                                 <img
-                                                    src={data.data_renap.FOTO}
+                                                    src={data.renap_data.foto}
                                                     alt="Foto de perfil"
                                                     className="w-full object-cover aspect-[3/4] sm:aspect-[4/5] lg:aspect-auto lg:h-80" // 👈 responsive fix
                                                     onError={handleImageError}
@@ -919,7 +858,7 @@ const BioRiskAI = () => {
                                                             Nombre Completo:
                                                         </span>
                                                         <span className="font-medium">
-                                                            {data.data_renap.PRIMER_NOMBRE} {data.data_renap.SEGUNDO_NOMBRE}
+                                                            {data.renap_data.primer_nombre} {data.renap_data.segundo_nombre}
                                                         </span>
                                                     </div>
                                                     <div>
@@ -928,7 +867,7 @@ const BioRiskAI = () => {
                                                             Apellidos:
                                                         </span>
                                                         <span className="font-medium">
-                                                            {data.data_renap.PRIMER_APELLIDO} {data.data_renap.SEGUNDO_APELLIDO}
+                                                            {data.renap_data.primer_apellido} {data.renap_data.segundo_apellido}
                                                         </span>
                                                     </div>
                                                     <div>
@@ -937,7 +876,7 @@ const BioRiskAI = () => {
                                                             Edad:
                                                         </span>
                                                         <span className="font-medium">
-                                                            {calcularEdad(data.data_renap.FECHA_NACIMIENTO)} años
+                                                            {calcularEdad(data.renap_data.fecha_nacimiento_renap)} años
                                                         </span>
                                                     </div>
                                                     <div>
@@ -946,7 +885,7 @@ const BioRiskAI = () => {
                                                             Estado Civil:
                                                         </span>
                                                         <span className="font-medium">
-                                                            {formatEstadoCivil(data.data_renap.ESTADO_CIVIL)}
+                                                            {formatEstadoCivil(data.renap_data.estado_civil)}
                                                         </span>
                                                     </div>
                                                     <div>
@@ -954,14 +893,14 @@ const BioRiskAI = () => {
                                                             <Briefcase className="w-3 h-3" />
                                                             Ocupación:
                                                         </span>
-                                                        <span className="font-medium">{data.data_renap.OCUPACION}</span>
+                                                        <span className="font-medium">{data.renap_data.ocupacion_renap}</span>
                                                     </div>
                                                     <div>
                                                         <span className="text-slate-600 block mb-1 flex items-center gap-1">
                                                             <MapPin className="w-3 h-3" />
                                                             Vecindad:
                                                         </span>
-                                                        <span className="font-medium">{data.data_renap.VECINDAD}</span>
+                                                        <span className="font-medium">{data.renap_data.vecindad}</span>
                                                     </div>
                                                 </div>
                                             </div>

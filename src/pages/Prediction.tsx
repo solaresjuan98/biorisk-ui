@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Search, Brain, CheckCircle, XCircle, Clock, TrendingUp, AlertCircle, Zap, Eye, BarChart3, Users, GraduationCap, Briefcase, MapPin, DollarSign, Shield, User, Calendar, Cpu, Activity, Sparkles, Bot, Target, Layers, Network } from 'lucide-react';
+import { useState, useEffect, useRef } from 'react';
+import { Brain, CheckCircle, XCircle, Camera, Clock, TrendingUp, AlertCircle, Zap, Eye, BarChart3, Users, GraduationCap, Briefcase, MapPin, DollarSign, Shield, User, Calendar, Cpu, X, Sparkles, Bot, Target, Network, Activity } from 'lucide-react';
 
 // Interfaces para los datos completos
 interface DataRenap {
@@ -87,6 +87,79 @@ const BioRiskAI = () => {
     const [smartInsights, setSmartInsights] = useState<AIInsight[]>([]);
     const [aiProcessingSteps, setAiProcessingSteps] = useState<string[]>([]);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
+    const [bgColor, setBgColor] = useState('bg-gray-100');
+
+    const [bgCode, setBgCode] = useState<string>("");
+    const [useCustomBg, setUseCustomBg] = useState<boolean>(false);
+
+    const [isCameraOpen, setIsCameraOpen] = useState(false);
+    const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
+    const videoRef = useRef<HTMLVideoElement | null>(null);
+    const canvasRef = useRef<HTMLCanvasElement | null>(null);
+    const streamRef = useRef<MediaStream | null>(null);
+    const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    const openCamera = async () => {
+
+        try {
+            if (!navigator.mediaDevices?.getUserMedia) {
+                // Fallback (móviles): usa la cámara del dispositivo vía input capture
+                fileInputRef.current?.click();
+                return;
+            }
+            const stream = await navigator.mediaDevices.getUserMedia({
+                video: { facingMode: { ideal: "environment" } },
+                audio: false,
+            });
+            streamRef.current = stream;
+            if (videoRef.current) {
+                videoRef.current.srcObject = stream;
+                await videoRef.current.play();
+            }
+            setIsCameraOpen(true);
+        } catch (error) {
+            console.error(error);
+            fileInputRef.current?.click();
+        }
+
+    }
+
+    const closeCamera = () => {
+        streamRef.current?.getTracks().forEach((t) => t.stop());
+        streamRef.current = null;
+        setIsCameraOpen(false);
+    };
+
+    const capturePhoto = () => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !canvas) return;
+        const w = video.videoWidth || 720;
+        const h = video.videoHeight || 960;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.drawImage(video, 0, 0, w, h);
+        const dataUrl = canvas.toDataURL("image/jpeg", 0.9);
+        setPhotoDataUrl(dataUrl);
+        closeCamera();
+    };
+
+    const onFileCapture = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (!file) return;
+        const reader = new FileReader();
+        reader.onload = () => setPhotoDataUrl(reader.result as string);
+        reader.readAsDataURL(file);
+    };
+
+    // Limpieza por si el componente se desmonta con la cámara abierta
+    useEffect(() => {
+        return () => {
+            streamRef.current?.getTracks().forEach((t) => t.stop());
+        };
+    }, []);
 
     // Steps de procesamiento de IA
     const processingSteps = [
@@ -397,14 +470,84 @@ const BioRiskAI = () => {
     };
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900">
+        // min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900
+        <div
+            className={`${bgColor} min-h-screen transition-colors duration-500`}
+            style={useCustomBg ? { background: bgCode } : undefined}
+        >
+
+            {/* === Switcher flotante de color === */}
+            {/* === Switcher flotante de color === */}
+            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-3 p-3 bg-white/90 shadow-lg rounded-2xl border border-gray-200">
+
+                {/* Presets existentes */}
+                <div className="flex gap-2">
+                    <button
+                        onClick={() => { setBgColor("bg-gray-100"); setUseCustomBg(false); }}
+                        className={`w-8 h-8 rounded-full border-2 ${!useCustomBg && bgColor === "bg-gray-100" ? "border-blue-600" : "border-transparent"} bg-gray-100`}
+                        title="Gris claro"
+                    />
+                    <button
+                        onClick={() => { setBgColor("bg-gradient-to-r from-blue-50 to-purple-50"); setUseCustomBg(false); }}
+                        className={`w-8 h-8 rounded-full border-2 ${!useCustomBg && bgColor.includes("blue-50") ? "border-blue-600" : "border-transparent"} bg-gradient-to-r from-blue-50 to-purple-50`}
+                        title="Azul/Púrpura"
+                    />
+                    <button
+                        onClick={() => { setBgColor("bg-gradient-to-r from-emerald-50 to-teal-50"); setUseCustomBg(false); }}
+                        className={`w-8 h-8 rounded-full border-2 ${!useCustomBg && bgColor.includes("emerald-50") ? "border-blue-600" : "border-transparent"} bg-gradient-to-r from-emerald-50 to-teal-50`}
+                        title="Verde/Teal"
+                    />
+                </div>
+
+                {/* Custom color / gradient */}
+                <div className="flex flex-col gap-2 mt-1">
+                    {/* Picker rápido (hex) */}
+                    <input
+                        type="color"
+                        value={/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(bgCode) ? bgCode : "#f3f4f6"}
+                        onChange={(e) => { setBgCode(e.target.value); setUseCustomBg(true); }}
+                        className="w-full h-8 rounded cursor-pointer"
+                        title="Selector de color (hex)"
+                    />
+
+                    {/* Campo libre: hex, rgba, nombre o gradient */}
+                    <input
+                        type="text"
+                        value={bgCode}
+                        onChange={(e) => setBgCode(e.target.value)}
+                        placeholder={`#0ea5e9 | rgba(0,0,0,.5) | linear-gradient(135deg,#1e3a8a,#9333ea)`}
+                        className="w-56 px-2 py-1 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500"
+                    />
+
+                    <div className="flex gap-2">
+                        <button
+                            type="button"
+                            onClick={() => setUseCustomBg(true)}
+                            className="px-2 py-1 text-xs rounded-lg border bg-gray-50 hover:bg-white"
+                            title="Aplicar código"
+                        >
+                            Aplicar
+                        </button>
+                        <button
+                            type="button"
+                            onClick={() => { setUseCustomBg(false); }}
+                            className="px-2 py-1 text-xs rounded-lg border bg-gray-50 hover:bg-white"
+                            title="Volver a presets"
+                        >
+                            Usar presets
+                        </button>
+                    </div>
+                </div>
+            </div>
+
             <div className="max-w-7xl mx-auto p-6 space-y-6">
                 {/* Header con emphasis en IA */}
                 <div className="text-center py-8 relative">
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600/20 to-purple-600/20 rounded-3xl"></div>
+                    {/* agregar /20 para opacidad */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-600 to-purple-600 text-white rounded-3xl"></div>
                     <div className="relative">
                         <div className="flex items-center justify-center gap-3 mb-4">
-                            <div className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl">
+                            <div className="p-3 bg-gradient-to-r from-blue-600 via-purple-600 to-purple-600 rounded-2xl">
                                 <Brain className="w-8 h-8 text-white" />
                             </div>
                             <div className="p-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-2xl">
@@ -418,17 +561,17 @@ const BioRiskAI = () => {
                             BioRisk
                         </h1>
                         <p className="text-xl text-blue-200 mb-2">Análisis Predictivo + Biométrico</p>
-                        <div className="flex items-center justify-center gap-4 text-sm text-blue-300">
+                        <div className="flex items-center justify-center gap-4 text-xs text-blue-300">
                             {/* <div className="flex items-center gap-2">
                                 <Sparkles className="w-4 h-4" />
                                 <span>IA Generativa</span>
                             </div> */}
-                            <div className="flex items-center gap-2">
-                                <Target className="w-4 h-4" />
+                            {/* <div className="flex items-center gap-2">
+                                <Target className="w-3 h-3" />
                                 <span>Predicción Automática</span>
-                            </div>
+                            </div> */}
                             <div className="flex items-center gap-2">
-                                <Shield className="w-4 h-4" />
+                                <Shield className="w-3 h-3" />
                                 <span>Análisis Demógrafico y Biométrico</span>
                             </div>
                         </div>
@@ -446,12 +589,24 @@ const BioRiskAI = () => {
                                 type="text"
                                 value={cui}
                                 onChange={(e) => setCui(e.target.value)}
-                                placeholder="Ingresa el CUI para análisis con IA..."
+                                placeholder="Ingresa el CUI para análisis..."
                                 className="w-full pl-12 pr-4 py-4 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-lg text-gray-900"
                                 onKeyPress={(e) => e.key === 'Enter' && handleBuscar()}
                             />
                         </div>
 
+                        {/* === NUEVO: botón para tomar foto (opcional) === */}
+                        <button
+                            type="button"
+                            onClick={openCamera}
+                            className="px-4 py-4 bg-white border border-gray-300 hover:border-blue-400 text-gray-900 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow md:min-w-44"
+                            title="Tomar foto (opcional)"
+                        >
+                            <Camera className="w-5 h-5" />
+                            Tomar foto
+                        </button>
+
+                        {/* Botón original: NO TOCADO */}
                         <button
                             onClick={handleBuscar}
                             disabled={loading || !cui.trim()}
@@ -513,485 +668,596 @@ const BioRiskAI = () => {
                             </div>
                         </div>
                     )}
-                </div>
-
-                {data && (
-                    <div className="space-y-6">
-                        {/* Panel Principal con Foto */}
-                        <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 overflow-hidden">
-                            <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white p-6">
-                                <div className="flex items-center justify-between">
-                                    <div>
-                                        <h2 className="text-3xl font-bold mb-2 flex items-center gap-3">
-                                            <Sparkles className="w-8 h-8" />
-                                            Análisis Completo de IA
-                                        </h2>
-                                        <p className="opacity-90 text-lg">CUI: {data.data_renap.CUI}</p>
-                                        <p className="opacity-75 text-sm flex items-center gap-2 mt-1">
-                                            <Clock className="w-4 h-4" />
-                                            {new Date(data.processing_timestamp).toLocaleString('es-GT')}
-                                        </p>
-                                        <div className="flex items-center gap-2 mt-2">
-                                            <div className="px-3 py-1 bg-white/20 rounded-full text-xs font-semibold flex items-center gap-1">
-                                                <Bot className="w-3 h-3" />
-                                                Powered by AI
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center gap-3">
-                                        <Brain className="w-12 h-12 opacity-80" />
-                                        <Cpu className="w-10 h-10 opacity-60" />
-                                    </div>
+                    {/* === NUEVO: Preview de foto capturada (opcional) === */}
+                    {photoDataUrl && (
+                        <div className="max-w-3xl mx-auto mt-4 flex items-center justify-between gap-4 p-3 border rounded-xl bg-slate-50">
+                            <div className="flex items-center gap-3">
+                                <img
+                                    src={photoDataUrl}
+                                    alt="Selfie capturada"
+                                    className="w-16 h-16 rounded-lg object-cover border"
+                                />
+                                <div className="text-sm text-gray-700">
+                                    <p className="font-semibold">Selfie lista para enviar</p>
+                                    <p className="text-gray-500">Se adjuntará junto al CUI (opcional)</p>
                                 </div>
                             </div>
+                            <button
+                                type="button"
+                                onClick={() => setPhotoDataUrl(null)}
+                                className="flex items-center gap-2 px-3 py-2 rounded-lg border text-gray-700 hover:bg-white"
+                                title="Quitar foto"
+                            >
+                                <X className="w-4 h-4" />
+                                Quitar
+                            </button>
+                        </div>
+                    )}
 
-                            <div className="p-6 bg-white/95">
-                                <div className="grid lg:grid-cols-4 gap-6">
-                                    {/* Foto y contexto */}
-                                    <div className="lg:col-span-1">
-                                        <div className="relative">
-                                            <img
-                                                src={data.data_renap.FOTO}
-                                                alt="Foto de perfil"
-                                                className="w-full max-w-64 h-80 rounded-xl shadow-lg border border-gray-200 object-cover"
-                                                onError={handleImageError}
-                                            />
-                                            <div className="absolute top-3 right-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                                                <Zap className="w-3 h-3" />
-                                                Con Flash
-                                            </div>
-                                            <div className="absolute bottom-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                                                <Brain className="w-3 h-3" />
-                                                IA Verificado
-                                            </div>
-                                        </div>
-
-                                        {/* Contexto de imagen con IA */}
-                                        <div className="grid grid-cols-3 gap-2 mt-4">
-                                            <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200">
-                                                <Bot className="w-5 h-5 mx-auto mb-1 text-blue-600" />
-                                                <p className="text-xs font-medium text-blue-700 mb-1">IA Selfie</p>
-                                                <p className="text-xs text-blue-600 font-semibold">Detectado</p>
-                                            </div>
-                                            <div className="text-center p-2 bg-green-50 rounded-lg border border-green-200">
-                                                <Eye className="w-5 h-5 mx-auto mb-1 text-green-600" />
-                                                <p className="text-xs font-medium text-green-700 mb-1">IA Luz</p>
-                                                <p className="text-xs text-green-600 font-semibold">Óptima</p>
-                                            </div>
-                                            <div className="text-center p-2 bg-orange-50 rounded-lg border border-orange-200">
-                                                <Zap className="w-5 h-5 mx-auto mb-1 text-orange-600" />
-                                                <p className="text-xs font-medium text-orange-700 mb-1">IA Flash</p>
-                                                <p className="text-xs text-orange-600 font-semibold">Activo</p>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    {/* Panel principal de resultado */}
-                                    <div className="lg:col-span-3">
-                                        {/* Decisión Principal */}
-                                        <div className={`p-6 rounded-xl border-2 ${getDecisionBg(data.prediction)} mb-6 bg-white`}>
-                                            <div className={`flex items-center gap-4 ${getDecisionColor(data.prediction)} mb-4`}>
-                                                {data.prediction === "NO_MORA" ?
-                                                    <CheckCircle className="w-8 h-8" /> :
-                                                    <XCircle className="w-8 h-8" />
-                                                }
-                                                <span className="text-3xl font-bold">
-                                                    {data.prediction === "NO_MORA" ? "NO MORA" : "RIESGO DE MORA"}
-                                                </span>
-                                                <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold flex items-center gap-1">
-                                                    <Bot className="w-3 h-3" />
-                                                    IA Decidió
-                                                </div>
-                                            </div>
-
-                                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
-                                                <div>
-                                                    <p className="text-sm opacity-80 mb-1 flex items-center justify-center gap-1">
-                                                        <Target className="w-4 h-4" />
-                                                        Probabilidad IA
-                                                    </p>
-                                                    <p className="text-2xl font-bold text-blue-600">
-                                                        {(data.probability_mora * 100).toFixed(2)}%
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm opacity-80 mb-1 flex items-center justify-center gap-1">
-                                                        <Brain className="w-4 h-4" />
-                                                        Confianza IA
-                                                    </p>
-                                                    <div className={`inline-block px-3 py-1 rounded-full font-bold ${getConfidenceColor(data.confidence_level)}`}>
-                                                        {data.confidence_level}
-                                                    </div>
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm opacity-80 mb-1 flex items-center justify-center gap-1">
-                                                        <BarChart3 className="w-4 h-4" />
-                                                        Umbral ML
-                                                    </p>
-                                                    <p className="text-lg font-bold text-gray-700">
-                                                        {(data.model_metadata.threshold * 100).toFixed(1)}%
-                                                    </p>
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm opacity-80 mb-1 flex items-center justify-center gap-1">
-                                                        <TrendingUp className="w-4 h-4" />
-                                                        Score IA
-                                                    </p>
-                                                    <p className="text-lg font-bold text-purple-600">
-                                                        {(data.demographic_scores.score_demografico_total * 100).toFixed(1)}
-                                                    </p>
-                                                </div>
-                                            </div>
-                                        </div>
-
-                                        {/* Información Personal */}
-                                        <div className="bg-slate-50 rounded-lg p-6">
-                                            <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
-                                                <User className="w-5 h-5 text-blue-600" />
-                                                Información Personal
-                                            </h3>
-                                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 text-sm">
-                                                <div>
-                                                    <span className="text-slate-600 block mb-1 flex items-center gap-1">
-                                                        <User className="w-3 h-3" />
-                                                        Nombre Completo:
-                                                    </span>
-                                                    <span className="font-medium">
-                                                        {data.data_renap.PRIMER_NOMBRE} {data.data_renap.SEGUNDO_NOMBRE}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-600 block mb-1 flex items-center gap-1">
-                                                        <User className="w-3 h-3" />
-                                                        Apellidos:
-                                                    </span>
-                                                    <span className="font-medium">
-                                                        {data.data_renap.PRIMER_APELLIDO} {data.data_renap.SEGUNDO_APELLIDO}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-600 block mb-1 flex items-center gap-1">
-                                                        <Calendar className="w-3 h-3" />
-                                                        Edad:
-                                                    </span>
-                                                    <span className="font-medium">
-                                                        {calcularEdad(data.data_renap.FECHA_NACIMIENTO)} años
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-600 block mb-1 flex items-center gap-1">
-                                                        <Users className="w-3 h-3" />
-                                                        Estado Civil:
-                                                    </span>
-                                                    <span className="font-medium">
-                                                        {formatEstadoCivil(data.data_renap.ESTADO_CIVIL)}
-                                                    </span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-600 block mb-1 flex items-center gap-1">
-                                                        <Briefcase className="w-3 h-3" />
-                                                        Ocupación:
-                                                    </span>
-                                                    <span className="font-medium">{data.data_renap.OCUPACION}</span>
-                                                </div>
-                                                <div>
-                                                    <span className="text-slate-600 block mb-1 flex items-center gap-1">
-                                                        <MapPin className="w-3 h-3" />
-                                                        Vecindad:
-                                                    </span>
-                                                    <span className="font-medium">{data.data_renap.VECINDAD}</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
+                    {/* === NUEVO: Panel de cámara inline === */}
+                    {isCameraOpen && (
+                        <div className="max-w-3xl mx-auto mt-4 p-4 border rounded-2xl bg-black/90 text-white">
+                            <div className="relative rounded-xl overflow-hidden">
+                                <video
+                                    ref={videoRef}
+                                    className="w-full max-h-[60vh] rounded-xl bg-black"
+                                    autoPlay
+                                    playsInline
+                                    muted
+                                />
+                            </div>
+                            <div className="flex items-center justify-center gap-3 mt-4">
+                                <button
+                                    type="button"
+                                    onClick={capturePhoto}
+                                    className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold"
+                                >
+                                    Capturar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={closeCamera}
+                                    className="px-5 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold"
+                                >
+                                    Cancelar
+                                </button>
                             </div>
                         </div>
+                    )}
 
-                        <div className="grid lg:grid-cols-3 gap-6">
-                            {/* Insights Inteligentes de IA */}
-                            <div className="lg:col-span-2 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-6">
-                                <div className="flex items-center gap-3 mb-6">
-                                    <div className="p-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl">
-                                        <Brain className="w-6 h-6 text-white" />
-                                    </div>
-                                    <h3 className="text-xl font-bold text-gray-900">Insights de Inteligencia Artificial</h3>
-                                    <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold border border-green-200 flex items-center gap-1">
-                                        <Sparkles className="w-3 h-3" />
-                                        IA Activa
-                                    </div>
+                    {/* Canvas oculto para snapshot */}
+                    <canvas ref={canvasRef} className="hidden" />
+
+                    {/* Fallback móvil: abre cámara nativa (no permite elegir de galería si el SO respeta 'capture') */}
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        className="hidden"
+                        onChange={onFileCapture}
+                    />
+                </div>
+
+                {/* SKELETON AQUÍ */}
+                <div>
+
+                    {loading && (
+                        <div className="space-y-6 animate-pulse">
+                            {/* Header Skeleton */}
+                            <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 overflow-hidden">
+                                <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 p-6">
+                                    <div className="h-8 w-2/3 bg-white/30 rounded mb-3"></div>
+                                    <div className="h-4 w-1/3 bg-white/30 rounded mb-1"></div>
+                                    <div className="h-4 w-1/4 bg-white/30 rounded"></div>
                                 </div>
-
-                                <div className="space-y-4">
-                                    {smartInsights.map((insight, index) => (
-                                        <div
-                                            key={insight.id}
-                                            className={`p-5 rounded-xl border transition-all duration-500 ${getInsightBg(insight.type)}`}
-                                            style={{
-                                                animationDelay: `${index * 200}ms`,
-                                                animation: 'slideIn 0.5s ease-out forwards'
-                                            }}
-                                        >
-                                            <div className="flex items-start gap-4">
-                                                <div className="flex-shrink-0">
-                                                    {insight.icon}
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                        <span className="text-xs bg-white px-2 py-1 rounded-full font-bold border">
-                                                            {insight.category}
-                                                        </span>
-                                                        <span className={`text-xs px-2 py-1 rounded-full font-bold ${getPriorityColor(insight.priority)} flex items-center gap-1`}>
-                                                            {insight.priority === 'high' ? (
-                                                                <AlertCircle className="w-3 h-3" />
-                                                            ) : insight.priority === 'medium' ? (
-                                                                <Clock className="w-3 h-3" />
-                                                            ) : (
-                                                                <Eye className="w-3 h-3" />
-                                                            )}
-                                                            {insight.priority === 'high' ? 'Alta' : insight.priority === 'medium' ? 'Media' : 'Baja'} Prioridad
-                                                        </span>
-                                                    </div>
-                                                    <p className="text-sm font-semibold mb-3">{insight.message}</p>
-
-                                                    {insight.processing_step && (
-                                                        <p className="text-xs opacity-70 mb-3 flex items-center gap-1">
-                                                            <Cpu className="w-3 h-3" />
-                                                            Proceso IA: {insight.processing_step}
-                                                        </p>
-                                                    )}
-
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="text-xs opacity-80 flex items-center gap-1">
-                                                            <Target className="w-3 h-3" />
-                                                            Confianza de IA:
-                                                        </span>
-                                                        <div className="flex-1 bg-white/50 rounded-full h-2">
-                                                            <div
-                                                                className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-1000"
-                                                                style={{ width: `${insight.confidence}%` }}
-                                                            />
-                                                        </div>
-                                                        <span className="text-xs font-bold">{insight.confidence}%</span>
-                                                    </div>
-                                                </div>
-                                            </div>
+                                <div className="p-6 grid grid-cols-1 lg:grid-cols-4 gap-6">
+                                    {/* Foto skeleton */}
+                                    <div className="lg:col-span-1">
+                                        <div className="w-full h-80 bg-gray-200 rounded-xl"></div>
+                                        <div className="grid grid-cols-3 gap-2 mt-4">
+                                            <div className="h-14 bg-gray-200 rounded"></div>
+                                            <div className="h-14 bg-gray-200 rounded"></div>
+                                            <div className="h-14 bg-gray-200 rounded"></div>
                                         </div>
-                                    ))}
+                                    </div>
 
-                                    {smartInsights.length === 0 && (
-                                        <div className="text-center py-8 text-gray-600">
-                                            <div className="animate-pulse flex flex-col items-center gap-3">
-                                                <Brain className="w-12 h-12 text-blue-600" />
-                                                <p className="text-lg">Generando insights personalizados con IA...</p>
-                                                <div className="flex items-center gap-2 text-blue-600">
-                                                    <Sparkles className="w-4 h-4 animate-spin" />
-                                                    <span className="text-sm">Algoritmos procesando datos</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    )}
+                                    {/* Panel principal skeleton */}
+                                    <div className="lg:col-span-3 space-y-4">
+                                        <div className="h-24 bg-gray-200 rounded"></div>
+                                        <div className="h-36 bg-gray-200 rounded"></div>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Sidebar */}
-                            <div className="space-y-6">
-                                {/* Factores de Influencia con IA */}
-                                <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-6">
-                                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                        <Target className="w-5 h-5 text-purple-600" />
-                                        Factores Clave de IA
-                                    </h3>
-                                    <div className="space-y-3">
-                                        {Object.entries(data.feature_contributions)
-                                            .sort(([, a], [, b]) => b - a)
-                                            .slice(0, 6)
-                                            .map(([key, value], index) => (
-                                                <div key={key} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                                                    <div className="flex items-center gap-3">
-                                                        <span className="w-6 h-6 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
-                                                            {index + 1}
-                                                        </span>
-                                                        <span className="text-sm capitalize text-gray-900 font-medium">
-                                                            {key.replace('_', ' ')}
-                                                        </span>
-                                                    </div>
-                                                    <span className="text-sm font-bold text-emerald-600">
-                                                        {(value * 100).toFixed(1)}%
-                                                    </span>
+                            {/* Bloques secundarios skeleton */}
+                            <div className="grid lg:grid-cols-3 gap-6">
+                                <div className="lg:col-span-2 h-64 bg-gray-200 rounded"></div>
+                                <div className="h-64 bg-gray-200 rounded"></div>
+                            </div>
+                        </div>
+                    )}
+                    {data && !loading && (
+                        <div className="space-y-6">
+                            {/* Panel Principal con Foto */}
+                            <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 overflow-hidden">
+                                <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-indigo-600 text-white p-6">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <h2 className="text-3xl font-bold mb-2 flex items-center gap-3">
+                                                {/* <Sparkles className="w-8 h-8" /> */}
+                                                Análisis Completo de IA
+                                            </h2>
+                                            <p className="opacity-90 text-lg">CUI: {data.data_renap.CUI}</p>
+                                            <p className="opacity-75 text-sm flex items-center gap-2 mt-1">
+                                                <Clock className="w-4 h-4" />
+                                                {new Date(data.processing_timestamp).toLocaleString('es-GT')}
+                                            </p>
+                                            <div className="flex items-center gap-2 mt-2">
+                                                <div className="px-3 py-1 bg-white/20 rounded-full text-xs font-semibold flex items-center gap-1">
+                                                    <Bot className="w-3 h-3" />
+                                                    Powered by AI
                                                 </div>
-                                            ))}
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center gap-3">
+                                            <Brain className="w-12 h-12 opacity-80" />
+                                            <Cpu className="w-10 h-10 opacity-60" />
+                                        </div>
                                     </div>
                                 </div>
 
-                                {/* Información del Modelo de IA */}
-                                <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-6">
-                                    <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
-                                        <Cpu className="w-5 h-5 text-blue-600" />
-                                        Modelo de IA
-                                    </h3>
-                                    <div className="space-y-3 text-sm">
-                                        <div className="flex justify-between text-gray-900">
-                                            <span className="text-gray-600 flex items-center gap-1">
-                                                <Bot className="w-3 h-3" />
-                                                Algoritmo:
-                                            </span>
-                                            <span className="font-medium">GBClassifier</span>
-                                        </div>
-                                        <div className="flex justify-between text-gray-900">
-                                            <span className="text-gray-600 flex items-center gap-1">
-                                                <BarChart3 className="w-3 h-3" />
-                                                Umbral IA:
-                                            </span>
-                                            <span className="font-medium">{(data.model_metadata.threshold * 100).toFixed(0)}%</span>
-                                        </div>
-                                        <div className="flex justify-between text-gray-900">
-                                            <span className="text-gray-600 flex items-center gap-1">
-                                                <TrendingUp className="w-3 h-3" />
-                                                Variables:
-                                            </span>
-                                            <span className="font-medium">{data.model_metadata.features_count}</span>
-                                        </div>
-                                        <div className="pt-3 border-t border-gray-200">
-                                            <p className="text-xs text-gray-600 flex items-center gap-1">
+                                <div className="p-6 bg-white/95">
+                                    <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+                                        {/* Foto y contexto */}
+                                        <div className="lg:col-span-1">
+                                            <div className="relative w-full overflow-hidden rounded-xl shadow-lg border border-gray-200">
+                                                <img
+                                                    src={data.data_renap.FOTO}
+                                                    alt="Foto de perfil"
+                                                    className="w-full object-cover aspect-[3/4] sm:aspect-[4/5] lg:aspect-auto lg:h-80" // 👈 responsive fix
+                                                    onError={handleImageError}
+                                                />
+                                                <div className="absolute top-3 right-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
+                                                    <Zap className="w-3 h-3" />
+                                                    Con Flash
+                                                </div>
+                                                {/* <div className="absolute bottom-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                                                 <Brain className="w-3 h-3" />
-                                                Variables de IA: Edad, Estado Civil, Educación, Ingresos, Vivienda
+                                                IA Verificado
+                                            </div> */}
+                                            </div>
+
+                                            {/* Contexto de imagen con IA */}
+                                            <div className="grid grid-cols-3 gap-2 mt-4">
+                                                <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200">
+                                                    <Bot className="w-5 h-5 mx-auto mb-1 text-blue-600" />
+                                                    <p className="text-xs font-medium text-blue-700 mb-1">IA Selfie</p>
+                                                    <p className="text-xs text-blue-600 font-semibold">Detectado</p>
+                                                </div>
+                                                <div className="text-center p-2 bg-green-50 rounded-lg border border-green-200">
+                                                    <Eye className="w-5 h-5 mx-auto mb-1 text-green-600" />
+                                                    <p className="text-xs font-medium text-green-700 mb-1">IA Luz</p>
+                                                    <p className="text-xs text-green-600 font-semibold">Óptima</p>
+                                                </div>
+                                                <div className="text-center p-2 bg-orange-50 rounded-lg border border-orange-200">
+                                                    <Zap className="w-5 h-5 mx-auto mb-1 text-orange-600" />
+                                                    <p className="text-xs font-medium text-orange-700 mb-1">IA Flash</p>
+                                                    <p className="text-xs text-orange-600 font-semibold">Activo</p>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Panel principal de resultado */}
+                                        <div className="lg:col-span-3">
+                                            {/* Decisión Principal */}
+                                            <div className={`p-6 rounded-xl border-2 ${getDecisionBg(data.prediction)} mb-6 bg-white`}>
+                                                <div className={`flex items-center gap-4 ${getDecisionColor(data.prediction)} mb-4`}>
+                                                    {data.prediction === "NO_MORA" ?
+                                                        <CheckCircle className="w-8 h-8" /> :
+                                                        <XCircle className="w-8 h-8" />
+                                                    }
+                                                    <span className="text-3xl font-bold">
+                                                        {data.prediction === "NO_MORA" ? "NO MORA" : "RIESGO DE MORA"}
+                                                    </span>
+                                                    <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold flex items-center gap-1">
+                                                        <Bot className="w-3 h-3" />
+                                                        IA Decidió
+                                                    </div>
+                                                </div>
+
+                                                <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-center">
+                                                    <div>
+                                                        <p className="text-sm opacity-80 mb-1 flex items-center justify-center gap-1">
+                                                            <Target className="w-4 h-4" />
+                                                            Probabilidad IA
+                                                        </p>
+                                                        <p className="text-lg font-bold text-blue-600">
+                                                            {(data.probability_mora * 100).toFixed(2)}%
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm opacity-80 mb-1 flex items-center justify-center gap-1">
+                                                            <Brain className="w-4 h-4" />
+                                                            Confianza IA
+                                                        </p>
+                                                        <div className={`inline-block px-3 py-1 rounded-full font-bold ${getConfidenceColor(data.confidence_level)}`}>
+                                                            {data.confidence_level}
+                                                        </div>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm opacity-80 mb-1 flex items-center justify-center gap-1">
+                                                            <BarChart3 className="w-4 h-4" />
+                                                            Umbral ML
+                                                        </p>
+                                                        <p className="text-lg font-bold text-gray-700">
+                                                            {(data.model_metadata.threshold * 100).toFixed(1)}%
+                                                        </p>
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm opacity-80 mb-1 flex items-center justify-center gap-1">
+                                                            <TrendingUp className="w-4 h-4" />
+                                                            Score IA
+                                                        </p>
+                                                        <p className="text-lg font-bold text-purple-600">
+                                                            {(data.demographic_scores.score_demografico_total * 100).toFixed(1)}
+                                                        </p>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Información Personal */}
+                                            <div className="bg-slate-50 rounded-lg p-6">
+                                                <h3 className="font-semibold text-slate-900 mb-4 flex items-center gap-2">
+                                                    <User className="w-5 h-5 text-blue-600" />
+                                                    Información Personal
+                                                </h3>
+                                                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                                                    <div>
+                                                        <span className="text-slate-600 block mb-1 flex items-center gap-1">
+                                                            <User className="w-3 h-3" />
+                                                            Nombre Completo:
+                                                        </span>
+                                                        <span className="font-medium">
+                                                            {data.data_renap.PRIMER_NOMBRE} {data.data_renap.SEGUNDO_NOMBRE}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-600 block mb-1 flex items-center gap-1">
+                                                            <User className="w-3 h-3" />
+                                                            Apellidos:
+                                                        </span>
+                                                        <span className="font-medium">
+                                                            {data.data_renap.PRIMER_APELLIDO} {data.data_renap.SEGUNDO_APELLIDO}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-600 block mb-1 flex items-center gap-1">
+                                                            <Calendar className="w-3 h-3" />
+                                                            Edad:
+                                                        </span>
+                                                        <span className="font-medium">
+                                                            {calcularEdad(data.data_renap.FECHA_NACIMIENTO)} años
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-600 block mb-1 flex items-center gap-1">
+                                                            <Users className="w-3 h-3" />
+                                                            Estado Civil:
+                                                        </span>
+                                                        <span className="font-medium">
+                                                            {formatEstadoCivil(data.data_renap.ESTADO_CIVIL)}
+                                                        </span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-600 block mb-1 flex items-center gap-1">
+                                                            <Briefcase className="w-3 h-3" />
+                                                            Ocupación:
+                                                        </span>
+                                                        <span className="font-medium">{data.data_renap.OCUPACION}</span>
+                                                    </div>
+                                                    <div>
+                                                        <span className="text-slate-600 block mb-1 flex items-center gap-1">
+                                                            <MapPin className="w-3 h-3" />
+                                                            Vecindad:
+                                                        </span>
+                                                        <span className="font-medium">{data.data_renap.VECINDAD}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="grid lg:grid-cols-3 gap-6">
+                                {/* Insights Inteligentes de IA */}
+                                <div className="lg:col-span-2 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-6">
+                                    <div className="flex items-center gap-3 mb-6">
+                                        <div className="p-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl">
+                                            <Brain className="w-6 h-6 text-white" />
+                                        </div>
+                                        <h3 className="text-xl font-bold text-gray-900">Insights de Inteligencia Artificial</h3>
+                                        <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold border border-green-200 flex items-center gap-1">
+                                            <Sparkles className="w-3 h-3" />
+                                            IA Activa
+                                        </div>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        {smartInsights.map((insight, index) => (
+                                            <div
+                                                key={insight.id}
+                                                className={`p-5 rounded-xl border transition-all duration-500 ${getInsightBg(insight.type)}`}
+                                                style={{
+                                                    animationDelay: `${index * 200}ms`,
+                                                    animation: 'slideIn 0.5s ease-out forwards'
+                                                }}
+                                            >
+                                                <div className="flex items-start gap-4">
+                                                    <div className="flex-shrink-0">
+                                                        {insight.icon}
+                                                    </div>
+                                                    <div className="flex-1">
+                                                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                                                            <span className="text-xs bg-white px-2 py-1 rounded-full font-bold border">
+                                                                {insight.category}
+                                                            </span>
+                                                            <span className={`text-xs px-2 py-1 rounded-full font-bold ${getPriorityColor(insight.priority)} flex items-center gap-1`}>
+                                                                {insight.priority === 'high' ? (
+                                                                    <AlertCircle className="w-3 h-3" />
+                                                                ) : insight.priority === 'medium' ? (
+                                                                    <Clock className="w-3 h-3" />
+                                                                ) : (
+                                                                    <Eye className="w-3 h-3" />
+                                                                )}
+                                                                {insight.priority === 'high' ? 'Alta' : insight.priority === 'medium' ? 'Media' : 'Baja'} Prioridad
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-sm font-semibold mb-3">{insight.message}</p>
+
+                                                        {insight.processing_step && (
+                                                            <p className="text-xs opacity-70 mb-3 flex items-center gap-1">
+                                                                <Cpu className="w-3 h-3" />
+                                                                Proceso IA: {insight.processing_step}
+                                                            </p>
+                                                        )}
+
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="text-xs opacity-80 flex items-center gap-1">
+                                                                <Target className="w-3 h-3" />
+                                                                Confianza de IA:
+                                                            </span>
+                                                            <div className="flex-1 bg-white/50 rounded-full h-2">
+                                                                <div
+                                                                    // className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-full transition-all duration-1000"
+                                                                    className=" bg-blue-500 h-2 rounded-full transition-all duration-1000"
+                                                                    style={{ width: `${insight.confidence}%` }}
+                                                                />
+                                                            </div>
+                                                            <span className="text-xs font-bold">{insight.confidence}%</span>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+
+                                        {smartInsights.length === 0 && (
+                                            <div className="text-center py-8 text-gray-600">
+                                                <div className="animate-pulse flex flex-col items-center gap-3">
+                                                    <Brain className="w-12 h-12 text-blue-600" />
+                                                    <p className="text-lg">Generando insights personalizados con IA...</p>
+                                                    <div className="flex items-center gap-2 text-blue-600">
+                                                        <Sparkles className="w-4 h-4 animate-spin" />
+                                                        <span className="text-sm">Algoritmos procesando datos</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Sidebar */}
+                                <div className="space-y-6">
+                                    {/* Factores de Influencia con IA */}
+                                    <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-6">
+                                        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                            <Target className="w-5 h-5 text-purple-600" />
+                                            Factores Clave de IA
+                                        </h3>
+                                        <div className="space-y-3">
+                                            {Object.entries(data.feature_contributions)
+                                                .sort(([, a], [, b]) => b - a)
+                                                .slice(0, 6)
+                                                .map(([key, value], index) => (
+                                                    <div key={key} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="w-6 h-6 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                                                {index + 1}
+                                                            </span>
+                                                            <span className="text-sm capitalize text-gray-900 font-medium">
+                                                                {key.replace('_', ' ')}
+                                                            </span>
+                                                        </div>
+                                                        <span className="text-sm font-bold text-emerald-600">
+                                                            {(value * 100).toFixed(1)}%
+                                                        </span>
+                                                    </div>
+                                                ))}
+                                        </div>
+                                    </div>
+
+                                    {/* Información del Modelo de IA */}
+                                    <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-6">
+                                        <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+                                            <Cpu className="w-5 h-5 text-blue-600" />
+                                            Modelo de IA
+                                        </h3>
+                                        <div className="space-y-3 text-sm">
+                                            <div className="flex justify-between text-gray-900">
+                                                <span className="text-gray-600 flex items-center gap-1">
+                                                    <Bot className="w-3 h-3" />
+                                                    Algoritmo:
+                                                </span>
+                                                <span className="font-medium">GBClassifier</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-900">
+                                                <span className="text-gray-600 flex items-center gap-1">
+                                                    <BarChart3 className="w-3 h-3" />
+                                                    Umbral IA:
+                                                </span>
+                                                <span className="font-medium">{(data.model_metadata.threshold * 100).toFixed(0)}%</span>
+                                            </div>
+                                            <div className="flex justify-between text-gray-900">
+                                                <span className="text-gray-600 flex items-center gap-1">
+                                                    <TrendingUp className="w-3 h-3" />
+                                                    Variables:
+                                                </span>
+                                                <span className="font-medium">{data.model_metadata.features_count}</span>
+                                            </div>
+                                            <div className="pt-3 border-t border-gray-200">
+                                                <p className="text-xs text-gray-600 flex items-center gap-1">
+                                                    <Brain className="w-3 h-3" />
+                                                    Variables de IA: Edad, Estado Civil, Educación, Ingresos, Vivienda
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Estado del Sistema de IA */}
+                                    <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200 p-6">
+                                        <div className="flex items-center gap-3 mb-4">
+                                            <Zap className="w-6 h-6 text-emerald-600" />
+                                            <h3 className="font-bold text-emerald-900">Estado del Sistema IA</h3>
+                                        </div>
+                                        <div className="space-y-3 text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                                <span className="text-emerald-800 flex items-center gap-1">
+                                                    <Bot className="w-3 h-3" />
+                                                    Datos RENAP validados por IA
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                                <span className="text-emerald-800 flex items-center gap-1">
+                                                    <TrendingUp className="w-3 h-3" />
+                                                    Análisis demográfico completado
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                                <span className="text-emerald-800 flex items-center gap-1">
+                                                    <Target className="w-3 h-3" />
+                                                    Predicción IA generada
+                                                </span>
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                                <span className="text-emerald-800 flex items-center gap-1">
+                                                    <Sparkles className="w-3 h-3" />
+                                                    Análisis biométrico activo
+                                                </span>
+                                            </div>
+                                            <p className="text-emerald-700 font-semibold mt-4 p-3 bg-emerald-100 rounded-lg border border-emerald-200 flex items-center gap-2">
+                                                <Bot className="w-4 h-4" />
+                                                {data.message}
                                             </p>
                                         </div>
                                     </div>
                                 </div>
-
-                                {/* Estado del Sistema de IA */}
-                                <div className="bg-gradient-to-r from-emerald-50 to-teal-50 rounded-2xl border border-emerald-200 p-6">
-                                    <div className="flex items-center gap-3 mb-4">
-                                        <Zap className="w-6 h-6 text-emerald-600" />
-                                        <h3 className="font-bold text-emerald-900">Estado del Sistema IA</h3>
-                                    </div>
-                                    <div className="space-y-3 text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-emerald-600" />
-                                            <span className="text-emerald-800 flex items-center gap-1">
-                                                <Bot className="w-3 h-3" />
-                                                Datos RENAP validados por IA
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-emerald-600" />
-                                            <span className="text-emerald-800 flex items-center gap-1">
-                                                <TrendingUp className="w-3 h-3" />
-                                                Análisis demográfico completado
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-emerald-600" />
-                                            <span className="text-emerald-800 flex items-center gap-1">
-                                                <Target className="w-3 h-3" />
-                                                Predicción IA generada
-                                            </span>
-                                        </div>
-                                        <div className="flex items-center gap-2">
-                                            <CheckCircle className="w-4 h-4 text-emerald-600" />
-                                            <span className="text-emerald-800 flex items-center gap-1">
-                                                <Sparkles className="w-3 h-3" />
-                                                Análisis biométrico activo
-                                            </span>
-                                        </div>
-                                        <p className="text-emerald-700 font-semibold mt-4 p-3 bg-emerald-100 rounded-lg border border-emerald-200 flex items-center gap-2">
-                                            <Bot className="w-4 h-4" />
-                                            {data.message}
-                                        </p>
-                                    </div>
-                                </div>
                             </div>
-                        </div>
 
-                        {/* Análisis Detallados */}
-                        <div className="grid md:grid-cols-1 gap-6">
-                            {/* Puntuaciones Demográficas con IA */}
-                            <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-8">
-                                <div className="flex items-center gap-4 mb-6">
-                                    <div className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl">
-                                        <Users className="w-7 h-7 text-white" />
-                                    </div>
-                                    <h3 className="text-2xl font-bold text-gray-900">Perfil Demográfico</h3>
-                                    {/* <div className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold border border-purple-200 flex items-center gap-1">
+                            {/* Análisis Detallados */}
+                            <div className="grid md:grid-cols-1 gap-6">
+                                {/* Puntuaciones Demográficas con IA */}
+                                <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-8">
+                                    <div className="flex items-center gap-4 mb-6">
+                                        <div className="p-3 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl">
+                                            <Users className="w-7 h-7 text-white" />
+                                        </div>
+                                        <h3 className="text-2xl font-bold text-gray-900">Perfil Demográfico</h3>
+                                        {/* <div className="px-4 py-2 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold border border-purple-200 flex items-center gap-1">
                                         <Bot className="w-4 h-4" />
                                         Machine Learning
                                     </div> */}
-                                </div>
+                                    </div>
 
-                                <div className="grid md:grid-cols-2 gap-6">
-                                    {Object.entries(data.demographic_scores)
-                                        .filter(([key]) => key !== 'score_demografico_total')
-                                        .map(([key, value]) => {
-                                            const icons = {
-                                                'estabilidad_economica': <DollarSign className="w-5 h-5 text-green-600" />,
-                                                'riesgo_ocupacional': <Briefcase className="w-5 h-5 text-blue-600" />,
-                                                'carga_familiar': <Users className="w-5 h-5 text-purple-600" />,
-                                                'madurez_edad': <Calendar className="w-5 h-5 text-pink-600" />,
-                                                'nivel_educativo': <GraduationCap className="w-5 h-5 text-indigo-600" />,
-                                                'historial_crediticio': <BarChart3 className="w-5 h-5 text-orange-600" />,
-                                                'ubicacion_geografica': <MapPin className="w-5 h-5 text-red-600" />
-                                            };
+                                    <div className="grid md:grid-cols-2 gap-6">
+                                        {Object.entries(data.demographic_scores)
+                                            .filter(([key]) => key !== 'score_demografico_total')
+                                            .map(([key, value]) => {
+                                                const icons = {
+                                                    'estabilidad_economica': <DollarSign className="w-5 h-5 text-green-600" />,
+                                                    'riesgo_ocupacional': <Briefcase className="w-5 h-5 text-blue-600" />,
+                                                    'carga_familiar': <Users className="w-5 h-5 text-purple-600" />,
+                                                    'madurez_edad': <Calendar className="w-5 h-5 text-pink-600" />,
+                                                    'nivel_educativo': <GraduationCap className="w-5 h-5 text-indigo-600" />,
+                                                    'historial_crediticio': <BarChart3 className="w-5 h-5 text-orange-600" />,
+                                                    'ubicacion_geografica': <MapPin className="w-5 h-5 text-red-600" />
+                                                };
 
-                                            const labels = {
-                                                'estabilidad_economica': 'Estabilidad Económica',
-                                                'riesgo_ocupacional': 'Riesgo Ocupacional',
-                                                'carga_familiar': 'Carga Familiar',
-                                                'madurez_edad': 'Madurez por Edad',
-                                                'nivel_educativo': 'Nivel Educativo',
-                                                'historial_crediticio': 'Historial Crediticio',
-                                                'ubicacion_geografica': 'Ubicación Geográfica'
-                                            };
+                                                const labels = {
+                                                    'estabilidad_economica': 'Estabilidad Económica',
+                                                    'riesgo_ocupacional': 'Riesgo Ocupacional',
+                                                    'carga_familiar': 'Carga Familiar',
+                                                    'madurez_edad': 'Madurez por Edad',
+                                                    'nivel_educativo': 'Nivel Educativo',
+                                                    'historial_crediticio': 'Historial Crediticio',
+                                                    'ubicacion_geografica': 'Ubicación Geográfica'
+                                                };
 
-                                            return (
-                                                <div key={key} className="p-5 bg-slate-50 rounded-xl border border-slate-200">
-                                                    <div className="flex items-center gap-3 mb-4">
-                                                        {icons[key as keyof typeof icons]}
-                                                        <span className="font-semibold text-gray-900">
-                                                            {labels[key as keyof typeof labels]}
-                                                        </span>
-                                                    </div>
-                                                    <div className="flex items-center gap-4">
-                                                        <div className="flex-1 bg-gray-200 rounded-full h-4">
-                                                            <div
-                                                                className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-4 rounded-full transition-all duration-1000 relative overflow-hidden"
-                                                                style={{ width: `${value * 100}%` }}
-                                                            >
-                                                                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
-                                                            </div>
+                                                return (
+                                                    <div key={key} className="p-5 bg-slate-50 rounded-xl border border-slate-200">
+                                                        <div className="flex items-center gap-3 mb-4">
+                                                            {icons[key as keyof typeof icons]}
+                                                            <span className="font-semibold text-gray-900">
+                                                                {labels[key as keyof typeof labels]}
+                                                            </span>
                                                         </div>
-                                                        <span className="text-lg font-bold text-gray-900 w-16">
-                                                            {(value * 100).toFixed(0)}%
-                                                        </span>
+                                                        <div className="flex items-center gap-4">
+                                                            <div className="flex-1 bg-gray-200 rounded-full h-4">
+                                                                <div
+                                                                    // className="bg-gradient-to-r from-blue-500 via-purple-500 to-pink-500 h-4 rounded-full transition-all duration-1000 relative overflow-hidden"
+                                                                    className="bg-blue-500 h-4 rounded-full transition-all duration-1000 relative overflow-hidden"
+                                                                    style={{ width: `${value * 100}%` }}
+                                                                >
+                                                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent animate-pulse"></div>
+                                                                </div>
+                                                            </div>
+                                                            <span className="text-lg font-bold text-gray-900 w-16">
+                                                                {(value * 100).toFixed(0)}%
+                                                            </span>
+                                                        </div>
+                                                        <p className="text-xs text-gray-600 mt-2 flex items-center gap-1">
+                                                            <Brain className="w-3 h-3" />
+                                                            Calculado por algoritmo de IA
+                                                        </p>
                                                     </div>
-                                                    <p className="text-xs text-gray-600 mt-2 flex items-center gap-1">
-                                                        <Brain className="w-3 h-3" />
-                                                        Calculado por algoritmo de IA
-                                                    </p>
-                                                </div>
-                                            );
-                                        })}
+                                                );
+                                            })}
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    </div>
-                )}
+                    )}
 
-                {/* Footer con branding de IA */}
-                {data && (
-                    <div className="text-center py-6">
-                        <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-lg px-6 py-3 rounded-full shadow-lg border border-white/30 text-gray-900">
-                            <Brain className="w-5 h-5 text-blue-600" />
-                            <span className="text-sm">Procesado por Sistema de IA: {new Date(data.processing_timestamp).toLocaleString('es-GT')}</span>
-                            <Sparkles className="w-5 h-5 text-purple-600" />
+                    {/* Footer con branding de IA */}
+                    {data && !loading && (
+                        <div className="text-center py-6">
+                            <div className="inline-flex items-center gap-3 bg-white/95 backdrop-blur-lg px-6 py-3 rounded-full shadow-lg border border-white/30 text-gray-900">
+                                <Brain className="w-5 h-5 text-blue-600" />
+                                <span className="text-sm">Procesado por Sistema de IA: {new Date(data.processing_timestamp).toLocaleString('es-GT')}</span>
+                                <Sparkles className="w-5 h-5 text-purple-600" />
+                            </div>
+                            <p className="text-blue-200 text-sm mt-3 flex items-center justify-center gap-2">
+                                <Zap className="w-4 h-4" />
+                                Powered by Advanced AI • Machine Learning • Análisis Biométrico
+                            </p>
                         </div>
-                        <p className="text-blue-200 text-sm mt-3 flex items-center justify-center gap-2">
-                            <Zap className="w-4 h-4" />
-                            Powered by Advanced AI • Machine Learning • Análisis Biométrico
-                        </p>
-                    </div>
-                )}
+                    )}
+                </div>
+
             </div>
 
             <style>{`

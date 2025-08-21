@@ -327,7 +327,8 @@ const BioRiskAI = () => {
 
     const handleBuscar = async () => {
         if (!cui.trim()) return;
-
+        console.log(photoDataUrl);
+        
         setLoading(true);
         setProcessingStep('');
         setSmartInsights([]);

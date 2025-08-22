@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Brain, CheckCircle, XCircle, Camera, Clock, TrendingUp, AlertCircle, Zap, Eye, BarChart3, Users, GraduationCap, Briefcase, MapPin, DollarSign, Shield, User, Calendar, Cpu, X, Sparkles, Bot, Target, Network, Activity } from 'lucide-react';
 import { getPrediction } from '@/utils/getPrediction';
 import type { PredictionResponse } from '@/interfaces';
+import { getMediapipePoints } from '@/utils/getMediapipe';
 
 // Interfaces para los datos completos
 // interface DataRenap {
@@ -100,6 +101,8 @@ const BioRiskAI = () => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    const [cameraBase64Photo, setCameraBase64Photo] = useState("");
 
     const openCamera = async () => {
 
@@ -334,11 +337,18 @@ const BioRiskAI = () => {
         setSmartInsights([]);
         setAiProcessingSteps([]);
         setCurrentStepIndex(0);
-
+        
         // Simular procesamiento completo
         setTimeout(async () => {
-
+            const image_base64 = photoDataUrl;
             const datosDemo = await getPrediction({ dpi: cui});
+
+            if(image_base64) {
+                const foto = await getMediapipePoints(image_base64 || "");
+                setCameraBase64Photo(foto.processed_image_base64 || "");
+            }
+            
+            // console.log("Foto procesada:", foto.processed_image_base64);  
 
             setResultados(datosDemo);
             const insights = generateAIInsights(datosDemo);

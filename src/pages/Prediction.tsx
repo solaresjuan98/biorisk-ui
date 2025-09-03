@@ -4,72 +4,6 @@ import { getPrediction } from '@/utils/getPrediction';
 import type { PredictionResponse } from '@/interfaces';
 import { getMediapipePoints } from '@/utils/getMediapipe';
 
-// Interfaces para los datos completos
-// interface DataRenap {
-//     CUI: string;
-//     PRIMER_NOMBRE: string;
-//     SEGUNDO_NOMBRE: string;
-//     PRIMER_APELLIDO: string;
-//     SEGUNDO_APELLIDO: string;
-//     FECHA_NACIMIENTO: string;
-//     GENERO: string;
-//     ESTADO_CIVIL: string;
-//     NACIONALIDAD: string;
-//     PAIS_NACIMIENTO: string;
-//     DEPTO_NACIMIENTO: string;
-//     MUNI_NACIMIENTO: string;
-//     VECINDAD: string;
-//     FECHA_VENCIMIENTO: string;
-//     OCUPACION: string;
-//     FOTO: string;
-// }
-
-// interface DemographicScores {
-//     estabilidad_economica: number;
-//     riesgo_ocupacional: number;
-//     carga_familiar: number;
-//     madurez_edad: number;
-//     nivel_educativo: number;
-//     historial_crediticio: number;
-//     ubicacion_geografica: number;
-//     score_demografico_total: number;
-// }
-
-// interface FeatureContributions {
-//     edad: number;
-//     ingresos: number;
-//     ocupacion: number;
-//     historial_crediticio: number;
-//     ubicacion: number;
-//     [key: string]: number;
-// }
-
-// interface ModelMetadata {
-//     model_type: string;
-//     threshold: number;
-//     features_count: number;
-//     features_head: string[];
-//     loaded_from: string;
-// }
-
-// interface DatosAnalisis {
-//     renap_data: DataRenap;
-//     prediction: string;
-//     probability_mora: number;
-//     confidence_level: string;
-//     risk_category: string;
-//     demographic_scores: DemographicScores;
-//     feature_contributions: FeatureContributions;
-//     model_metadata: ModelMetadata;
-//     processing_timestamp: string;
-//     success: boolean;
-//     message: string;
-// }
-
-// interface ResultadosResponse {
-//     cui_recibido: string;
-//     resultados: DatosAnalisis;
-// }
 
 interface AIInsight {
     id: number;
@@ -101,6 +35,12 @@ const BioRiskAI = () => {
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+    // nuevos estados
+    const [showProcessedImage, setShowProcessedImage] = useState(false);
+    const [isProcessingImage, setIsProcessingImage] = useState(false);
+    const [showImageModal, setShowImageModal] = useState(false);
+    const [hasProcessedOnce, setHasProcessedOnce] = useState(false);
 
     const [cameraBase64Photo, setCameraBase64Photo] = useState("");
 
@@ -331,23 +271,23 @@ const BioRiskAI = () => {
     const handleBuscar = async () => {
         if (!cui.trim()) return;
         console.log(photoDataUrl);
-        
+
         setLoading(true);
         setProcessingStep('');
         setSmartInsights([]);
         setAiProcessingSteps([]);
         setCurrentStepIndex(0);
-        
+
         // Simular procesamiento completo
         setTimeout(async () => {
             const image_base64 = photoDataUrl;
-            const datosDemo = await getPrediction({ dpi: cui});
+            const datosDemo = await getPrediction({ dpi: cui });
 
-            if(image_base64) {
+            if (image_base64) {
                 const foto = await getMediapipePoints(image_base64 || "");
                 setCameraBase64Photo(foto.processed_image_base64 || "");
             }
-            
+
             // console.log("Foto procesada:", foto.processed_image_base64);  
 
             setResultados(datosDemo);
@@ -419,6 +359,23 @@ const BioRiskAI = () => {
         }
     };
 
+    const handleImageProcess = async () => {
+        if (hasProcessedOnce) return;
+
+        setIsProcessingImage(true);
+        setHasProcessedOnce(true);
+
+        // Simular procesamiento de IA
+        setTimeout(() => {
+            setShowProcessedImage(true);
+            setIsProcessingImage(false);
+        }, 2000);
+    };
+
+    // const handleImageModal = () => {
+    //     setShowImageModal(true);
+    // };
+
     return (
         // min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-indigo-900
         <div
@@ -427,68 +384,6 @@ const BioRiskAI = () => {
         >
 
             {/* === Switcher flotante de color === */}
-            {/* === Switcher flotante de color === */}
-            <div className="fixed bottom-4 right-4 z-50 flex flex-col gap-3 p-3 bg-white/90 shadow-lg rounded-2xl border border-gray-200">
-
-                {/* Presets existentes */}
-                <div className="flex gap-2">
-                    <button
-                        onClick={() => { setBgColor("bg-gray-100"); setUseCustomBg(false); }}
-                        className={`w-8 h-8 rounded-full border-2 ${!useCustomBg && bgColor === "bg-gray-100" ? "border-blue-600" : "border-transparent"} bg-gray-100`}
-                        title="Gris claro"
-                    />
-                    <button
-                        onClick={() => { setBgColor("bg-gradient-to-r from-blue-50 to-purple-50"); setUseCustomBg(false); }}
-                        className={`w-8 h-8 rounded-full border-2 ${!useCustomBg && bgColor.includes("blue-50") ? "border-blue-600" : "border-transparent"} bg-gradient-to-r from-blue-50 to-purple-50`}
-                        title="Azul/Púrpura"
-                    />
-                    <button
-                        onClick={() => { setBgColor("bg-gradient-to-r from-emerald-50 to-teal-50"); setUseCustomBg(false); }}
-                        className={`w-8 h-8 rounded-full border-2 ${!useCustomBg && bgColor.includes("emerald-50") ? "border-blue-600" : "border-transparent"} bg-gradient-to-r from-emerald-50 to-teal-50`}
-                        title="Verde/Teal"
-                    />
-                </div>
-
-                {/* Custom color / gradient */}
-                <div className="flex flex-col gap-2 mt-1">
-                    {/* Picker rápido (hex) */}
-                    <input
-                        type="color"
-                        value={/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(bgCode) ? bgCode : "#f3f4f6"}
-                        onChange={(e) => { setBgCode(e.target.value); setUseCustomBg(true); }}
-                        className="w-full h-8 rounded cursor-pointer"
-                        title="Selector de color (hex)"
-                    />
-
-                    {/* Campo libre: hex, rgba, nombre o gradient */}
-                    <input
-                        type="text"
-                        value={bgCode}
-                        onChange={(e) => setBgCode(e.target.value)}
-                        placeholder={`#0ea5e9 | rgba(0,0,0,.5) | linear-gradient(135deg,#1e3a8a,#9333ea)`}
-                        className="w-56 px-2 py-1 text-sm border rounded-lg focus:ring-2 focus:ring-blue-500"
-                    />
-
-                    <div className="flex gap-2">
-                        <button
-                            type="button"
-                            onClick={() => setUseCustomBg(true)}
-                            className="px-2 py-1 text-xs rounded-lg border bg-gray-50 hover:bg-white"
-                            title="Aplicar código"
-                        >
-                            Aplicar
-                        </button>
-                        <button
-                            type="button"
-                            onClick={() => { setUseCustomBg(false); }}
-                            className="px-2 py-1 text-xs rounded-lg border bg-gray-50 hover:bg-white"
-                            title="Volver a presets"
-                        >
-                            Usar presets
-                        </button>
-                    </div>
-                </div>
-            </div>
 
             <div className="max-w-7xl mx-auto p-6 space-y-6">
                 {/* Header con emphasis en IA */}
@@ -762,29 +657,92 @@ const BioRiskAI = () => {
                                         {/* Foto y contexto */}
                                         <div className="lg:col-span-1">
                                             <div className="relative w-full overflow-hidden rounded-xl shadow-lg border border-gray-200">
-                                                <img
-                                                    src={data.renap_data.foto}
-                                                    alt="Foto de perfil"
-                                                    className="w-full object-cover aspect-[3/4] sm:aspect-[4/5] lg:aspect-auto lg:h-80" // 👈 responsive fix
-                                                    onError={handleImageError}
-                                                />
+                                                {/* OPCIÓN 1: Toggle entre imagen normal y procesada */}
+                                                <div
+                                                    className="relative cursor-pointer group"
+                                                    onClick={handleImageProcess}
+                                                    title={hasProcessedOnce ? "Ya procesado" : "Click para análisis biométrico"}
+                                                >
+                                                    {/* Imagen principal */}
+                                                    <img
+                                                        src={showProcessedImage && cameraBase64Photo ? cameraBase64Photo : data.renap_data.foto}
+                                                        alt="Foto de perfil"
+                                                        className={`w-full object-cover aspect-[3/4] sm:aspect-[4/5] lg:aspect-auto lg:h-80 transition-all duration-1000 ${showProcessedImage ? 'filter-none' : ''
+                                                            } ${hasProcessedOnce ? 'cursor-default' : 'cursor-pointer hover:brightness-110'}`}
+                                                        onError={handleImageError}
+                                                    />
+
+                                                    {/* Overlay de procesamiento */}
+                                                    {isProcessingImage && (
+                                                        <div className="absolute inset-0 bg-blue-600/80 flex items-center justify-center">
+                                                            <div className="text-center text-white">
+                                                                <div className="relative mb-3">
+                                                                    <Brain className="w-12 h-12 mx-auto animate-pulse" />
+                                                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-ping"></div>
+                                                                </div>
+                                                                <p className="text-sm font-semibold">Analizando con IA...</p>
+                                                                <p className="text-xs opacity-90">Detectando puntos biométricos</p>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Indicador de hover para procesamiento */}
+                                                    {!hasProcessedOnce && (
+                                                        <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                            <div className="bg-white/90 px-3 py-2 rounded-lg text-blue-600 font-semibold text-sm flex items-center gap-2">
+                                                                <Bot className="w-4 h-4" />
+                                                                Procesar con IA
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                {/* OPCIÓN 2: Botón para modal (comentado, descomenta para usar) */}
+                                                {/*
+                                                    <div 
+                                                        className="absolute top-3 left-3 bg-white/90 p-2 rounded-full cursor-pointer hover:bg-white transition-all shadow-lg"
+                                                        onClick={handleImageModal}
+                                                        title="Ver imagen ampliada"
+                                                    >
+                                                        <Eye className="w-4 h-4 text-blue-600" />
+                                                    </div>
+                                                    */
+                                                }
+
+                                                {/* Badges existentes */}
                                                 <div className="absolute top-3 right-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
                                                     <Zap className="w-3 h-3" />
-                                                    Con Flash
+                                                    {showProcessedImage ? "IA Procesado" : "Con Flash"}
                                                 </div>
-                                                {/* <div className="absolute bottom-3 left-3 bg-green-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                                                <Brain className="w-3 h-3" />
-                                                IA Verificado
-                                            </div> */}
+
+                                                {showProcessedImage && (
+                                                    <div className="absolute bottom-3 left-3 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 animate-slideIn">
+                                                        <Brain className="w-3 h-3" />
+                                                        Biométrico Activo
+                                                    </div>
+                                                )}
                                             </div>
 
-                                            {/* Contexto de imagen con IA */}
+                                            {/* Contexto de imagen con IA - ACTUALIZADO */}
                                             <div className="grid grid-cols-3 gap-2 mt-4">
-                                                <div className="text-center p-2 bg-blue-50 rounded-lg border border-blue-200">
-                                                    <Bot className="w-5 h-5 mx-auto mb-1 text-blue-600" />
-                                                    <p className="text-xs font-medium text-blue-700 mb-1">IA Selfie</p>
-                                                    <p className="text-xs text-blue-600 font-semibold">Detectado</p>
+                                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${showProcessedImage ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'
+                                                    }`}>
+                                                    {showProcessedImage ? (
+                                                        <Brain className="w-5 h-5 mx-auto mb-1 text-emerald-600" />
+                                                    ) : (
+                                                        <Bot className="w-5 h-5 mx-auto mb-1 text-blue-600" />
+                                                    )}
+                                                    <p className={`text-xs font-medium mb-1 ${showProcessedImage ? 'text-emerald-700' : 'text-blue-700'
+                                                        }`}>
+                                                        {showProcessedImage ? 'IA Biométrico' : 'IA Selfie'}
+                                                    </p>
+                                                    <p className={`text-xs font-semibold ${showProcessedImage ? 'text-emerald-600' : 'text-blue-600'
+                                                        }`}>
+                                                        {showProcessedImage ? 'Procesado' : 'Detectado'}
+                                                    </p>
                                                 </div>
+
+                                                {/* Los otros dos divs permanecen igual */}
                                                 <div className="text-center p-2 bg-green-50 rounded-lg border border-green-200">
                                                     <Eye className="w-5 h-5 mx-auto mb-1 text-green-600" />
                                                     <p className="text-xs font-medium text-green-700 mb-1">IA Luz</p>
@@ -1233,6 +1191,21 @@ const BioRiskAI = () => {
                 
                 .animate-pulse {
                     animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+                }
+
+                @keyframes slideIn {
+                    from {
+                        opacity: 0;
+                        transform: translateY(10px);
+                    }
+                    to {
+                        opacity: 1;
+                        transform: translateY(0);
+                    }
+                }
+
+                .animate-slideIn {
+                    animation: slideIn 0.5s ease-out;
                 }
             `}</style>
         </div>

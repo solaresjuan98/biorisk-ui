@@ -20,44 +20,6 @@ export const useAIProcessing = () => {
         'Aplicando algoritmos avanzados...',
         'Finalizando análisis predictivo...'
     ];
-
-
-    // const handleBuscar = async () => {
-    //     if (!cui.trim()) return;
-    //     console.log(photoDataUrl);
-
-    //     setLoading(true);
-    //     setProcessingStep('');
-    //     setSmartInsights([]);
-    //     setAiProcessingSteps([]);
-    //     setCurrentStepIndex(0);
-
-    //     // Simular procesamiento completo
-    //     setTimeout(async () => {
-    //         const image_base64 = photoDataUrl;
-    //         const datosDemo = await getPrediction({ dpi: cui });
-
-    //         if (image_base64) {
-    //             const foto = await getMediapipePoints(image_base64 || "");
-    //             setCameraBase64Photo(foto.processed_image_base64 || "");
-    //         }
-
-    //         // console.log("Foto procesada:", foto.processed_image_base64);  
-
-    //         setResultados(datosDemo);
-    //         const insights = generateAIInsights(datosDemo);
-
-    //         // Mostrar insights progresivamente con efecto de IA
-    //         insights.forEach((insight, index) => {
-    //             setTimeout(() => {
-    //                 setSmartInsights(prev => [...prev, insight]);
-    //             }, (index + 1) * 600);
-    //         });
-
-    //         setLoading(false);
-    //         setProcessingStep('');
-    //     }, 7000);
-    // };
     return {
         loading, 
         processingStep, 

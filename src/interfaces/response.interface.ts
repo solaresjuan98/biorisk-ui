@@ -67,6 +67,7 @@ export interface DatosRenap {
     lugar_nacimiento:  LugarNacimiento;
     vecindad:          string;
     foto_disponible:   boolean;
+    foto:               string;
 }
 
 export interface LugarNacimiento {

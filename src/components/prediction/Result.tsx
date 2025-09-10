@@ -66,6 +66,22 @@ export const Result: React.FC<ResultProps> = ({
     getInsightBg,
     getPriorityColor,
 }) => {
+    // Lógica para determinar imagen a mostrar
+    const getImageSource = () => {
+        // Prioridad: 1. Foto de cámara, 2. Foto RENAP
+        if (cameraBase64Photo) {
+            return cameraBase64Photo;
+        }
+        if (datos_renap.foto) {
+            return `data:image/jpeg;base64,${datos_renap.foto}`;
+        }
+        return null;
+    };
+
+    const hasAnyPhoto = cameraBase64Photo || datos_renap.foto;
+    const isClickable = hasAnyPhoto && !hasProcessedOnce;
+    const imageSource = getImageSource();
+
     return (
         <div className="space-y-6">
             {/* Panel Principal con Foto */}
@@ -100,98 +116,177 @@ export const Result: React.FC<ResultProps> = ({
                         {/* Foto y contexto */}
                         <div className="lg:col-span-1">
                             <div className="relative w-full overflow-hidden rounded-xl shadow-lg border border-gray-200">
-                                <div
-                                    className="relative cursor-pointer group"
-                                    onClick={handleImageProcess}
-                                    title={hasProcessedOnce ? "Ya procesado" : "Click para análisis biométrico"}
-                                >
-                                    {/* Imagen principal - usando foto base64 o placeholder */}
-                                    <img
-                                        src={showProcessedImage && cameraBase64Photo ? cameraBase64Photo : `data:image/jpeg;base64,${datos_renap.foto_disponible ? 'placeholder' : 'no-photo'}`}
-                                        alt="Foto de perfil"
-                                        className={`w-full object-cover aspect-[3/4] sm:aspect-[4/5] lg:aspect-auto lg:h-80 transition-all duration-1000 ${showProcessedImage ? 'filter-none' : ''
-                                            } ${hasProcessedOnce ? 'cursor-default' : 'cursor-pointer hover:brightness-110'}`}
-                                        onError={handleImageError}
-                                    />
-
-                                    {/* Overlay de procesamiento */}
-                                    {isProcessingImage && (
-                                        <div className="absolute inset-0 bg-blue-600/80 flex items-center justify-center">
-                                            <div className="text-center text-white">
-                                                <div className="relative mb-3">
-                                                    <Brain className="w-12 h-12 mx-auto animate-pulse" />
-                                                    <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-ping"></div>
-                                                </div>
-                                                <p className="text-sm font-semibold">Analizando con IA...</p>
-                                                <p className="text-xs opacity-90">Detectando puntos biométricos</p>
-                                            </div>
+                                {!hasAnyPhoto ? (
+                                    // Sin imagen disponible
+                                    <div className="relative w-full h-80 bg-gray-100 flex items-center justify-center">
+                                        <div className="text-center text-gray-500">
+                                            <User className="w-16 h-16 mx-auto mb-3 opacity-50" />
+                                            <p className="text-lg font-semibold mb-1">Fotografía no disponible</p>
+                                            <p className="text-sm opacity-75">No se puede realizar análisis biométrico</p>
                                         </div>
-                                    )}
-
-                                    {/* Indicador de hover para procesamiento */}
-                                    {!hasProcessedOnce && (
-                                        <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
-                                            <div className="bg-white/90 px-3 py-2 rounded-lg text-blue-600 font-semibold text-sm flex items-center gap-2">
-                                                <Bot className="w-4 h-4" />
-                                                Procesar con IA
-                                            </div>
-                                        </div>
-                                    )}
-                                </div>
-
-                                {/* OPCIÓN 2: Botón para modal */}
-                                {handleImageModal && (
-                                    <div
-                                        className="absolute top-3 left-3 bg-white/90 p-2 rounded-full cursor-pointer hover:bg-white transition-all shadow-lg"
-                                        onClick={handleImageModal}
-                                        title="Ver imagen ampliada"
-                                    >
-                                        <Eye className="w-4 h-4 text-blue-600" />
                                     </div>
-                                )}
+                                ) : (
+                                    // Con imagen disponible
+                                    <div
+                                        className={`relative ${isClickable ? 'cursor-pointer group' : 'cursor-default'}`}
+                                        onClick={isClickable ? handleImageProcess : undefined}
+                                        title={
+                                            hasProcessedOnce 
+                                                ? "Ya procesado" 
+                                                : isClickable 
+                                                    ? "Click para análisis biométrico" 
+                                                    : "Análisis no disponible"
+                                        }
+                                    >
+                                        {/* Imagen principal */}
+                                        <img
+                                            src={imageSource!}
+                                            alt="Foto de perfil"
+                                            className={`w-full object-cover aspect-[3/4] sm:aspect-[4/5] lg:aspect-auto lg:h-80 transition-all duration-1000 ${
+                                                showProcessedImage ? 'filter-none' : ''
+                                            } ${isClickable ? 'hover:brightness-110' : ''}`}
+                                            onError={handleImageError}
+                                        />
 
-                                {/* Badges existentes */}
-                                <div className="absolute top-3 right-3 bg-orange-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1">
-                                    <Zap className="w-3 h-3" />
-                                    {showProcessedImage ? "IA Procesado" : "Con Flash"}
-                                </div>
+                                        {/* Overlay de procesamiento */}
+                                        {isProcessingImage && (
+                                            <div className="absolute inset-0 bg-blue-600/80 flex items-center justify-center">
+                                                <div className="text-center text-white">
+                                                    <div className="relative mb-3">
+                                                        <Brain className="w-12 h-12 mx-auto animate-pulse" />
+                                                        <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-ping"></div>
+                                                    </div>
+                                                    <p className="text-sm font-semibold">Analizando con IA...</p>
+                                                    <p className="text-xs opacity-90">Detectando puntos biométricos</p>
+                                                </div>
+                                            </div>
+                                        )}
 
-                                {showProcessedImage && (
-                                    <div className="absolute bottom-3 left-3 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 animate-slideIn">
-                                        <Brain className="w-3 h-3" />
-                                        Biométrico Activo
+                                        {/* Indicador de hover para procesamiento */}
+                                        {isClickable && (
+                                            <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
+                                                <div className="bg-white/90 px-3 py-2 rounded-lg text-blue-600 font-semibold text-sm flex items-center gap-2">
+                                                    <Bot className="w-4 h-4" />
+                                                    Procesar con IA
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Botón para modal - solo si hay imagen */}
+                                        {handleImageModal && (
+                                            <div
+                                                className="absolute top-3 left-3 bg-white/90 p-2 rounded-full cursor-pointer hover:bg-white transition-all shadow-lg"
+                                                onClick={handleImageModal}
+                                                title="Ver imagen ampliada"
+                                            >
+                                                <Eye className="w-4 h-4 text-blue-600" />
+                                            </div>
+                                        )}
+
+                                        {/* Badge de estado */}
+                                        <div className={`absolute top-3 right-3 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
+                                            showProcessedImage 
+                                                ? 'bg-emerald-500' 
+                                                : cameraBase64Photo 
+                                                    ? 'bg-purple-500' 
+                                                    : 'bg-orange-500'
+                                        }`}>
+                                            {showProcessedImage ? (
+                                                <>
+                                                    <Brain className="w-3 h-3" />
+                                                    IA Procesado
+                                                </>
+                                            ) : cameraBase64Photo ? (
+                                                <>
+                                                    <Bot className="w-3 h-3" />
+                                                    Cámara App
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <User className="w-3 h-3" />
+                                                    RENAP
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {/* Badge de biométrico activo */}
+                                        {showProcessedImage && (
+                                            <div className="absolute bottom-3 left-3 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 animate-slideIn">
+                                                <Brain className="w-3 h-3" />
+                                                Biométrico Activo
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
 
                             {/* Contexto de imagen con IA */}
                             <div className="grid grid-cols-3 gap-2 mt-4">
-                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${showProcessedImage ? 'bg-emerald-50 border-emerald-200' : 'bg-blue-50 border-blue-200'
-                                    }`}>
-                                    {showProcessedImage ? (
-                                        <Brain className="w-5 h-5 mx-auto mb-1 text-emerald-600" />
+                                {/* Badge principal - tipo de imagen */}
+                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${
+                                    !hasAnyPhoto 
+                                        ? 'bg-gray-50 border-gray-200' 
+                                        : showProcessedImage 
+                                            ? 'bg-emerald-50 border-emerald-200' 
+                                            : cameraBase64Photo 
+                                                ? 'bg-purple-50 border-purple-200'
+                                                : 'bg-blue-50 border-blue-200'
+                                }`}>
+                                    {!hasAnyPhoto ? (
+                                        <>
+                                            <User className="w-5 h-5 mx-auto mb-1 text-gray-400" />
+                                            <p className="text-xs font-medium mb-1 text-gray-500">Sin Imagen</p>
+                                            <p className="text-xs font-semibold text-gray-400">No Disponible</p>
+                                        </>
+                                    ) : showProcessedImage ? (
+                                        <>
+                                            <Brain className="w-5 h-5 mx-auto mb-1 text-emerald-600" />
+                                            <p className="text-xs font-medium mb-1 text-emerald-700">IA Biométrico</p>
+                                            <p className="text-xs font-semibold text-emerald-600">Procesado</p>
+                                        </>
+                                    ) : cameraBase64Photo ? (
+                                        <>
+                                            <Bot className="w-5 h-5 mx-auto mb-1 text-purple-600" />
+                                            <p className="text-xs font-medium mb-1 text-purple-700">Cámara App</p>
+                                            <p className="text-xs font-semibold text-purple-600">Capturado</p>
+                                        </>
                                     ) : (
-                                        <Bot className="w-5 h-5 mx-auto mb-1 text-blue-600" />
+                                        <>
+                                            <User className="w-5 h-5 mx-auto mb-1 text-blue-600" />
+                                            <p className="text-xs font-medium mb-1 text-blue-700">RENAP</p>
+                                            <p className="text-xs font-semibold text-blue-600">Oficial</p>
+                                        </>
                                     )}
-                                    <p className={`text-xs font-medium mb-1 ${showProcessedImage ? 'text-emerald-700' : 'text-blue-700'
-                                        }`}>
-                                        {showProcessedImage ? 'IA Biométrico' : 'IA Selfie'}
+                                </div>
+
+                                {/* Badge de luz */}
+                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${
+                                    !hasAnyPhoto 
+                                        ? 'bg-gray-50 border-gray-200' 
+                                        : 'bg-green-50 border-green-200'
+                                }`}>
+                                    <Eye className={`w-5 h-5 mx-auto mb-1 ${!hasAnyPhoto ? 'text-gray-400' : 'text-green-600'}`} />
+                                    <p className={`text-xs font-medium mb-1 ${!hasAnyPhoto ? 'text-gray-500' : 'text-green-700'}`}>
+                                        IA Luz
                                     </p>
-                                    <p className={`text-xs font-semibold ${showProcessedImage ? 'text-emerald-600' : 'text-blue-600'
-                                        }`}>
-                                        {showProcessedImage ? 'Procesado' : 'Detectado'}
+                                    <p className={`text-xs font-semibold ${!hasAnyPhoto ? 'text-gray-400' : 'text-green-600'}`}>
+                                        {!hasAnyPhoto ? 'N/A' : 'Óptima'}
                                     </p>
                                 </div>
 
-                                <div className="text-center p-2 bg-green-50 rounded-lg border border-green-200">
-                                    <Eye className="w-5 h-5 mx-auto mb-1 text-green-600" />
-                                    <p className="text-xs font-medium text-green-700 mb-1">IA Luz</p>
-                                    <p className="text-xs text-green-600 font-semibold">Óptima</p>
-                                </div>
-                                <div className="text-center p-2 bg-orange-50 rounded-lg border border-orange-200">
-                                    <Zap className="w-5 h-5 mx-auto mb-1 text-orange-600" />
-                                    <p className="text-xs font-medium text-orange-700 mb-1">IA Flash</p>
-                                    <p className="text-xs text-orange-600 font-semibold">Activo</p>
+                                {/* Badge de flash */}
+                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${
+                                    !hasAnyPhoto 
+                                        ? 'bg-gray-50 border-gray-200' 
+                                        : 'bg-orange-50 border-orange-200'
+                                }`}>
+                                    <Zap className={`w-5 h-5 mx-auto mb-1 ${!hasAnyPhoto ? 'text-gray-400' : 'text-orange-600'}`} />
+                                    <p className={`text-xs font-medium mb-1 ${!hasAnyPhoto ? 'text-gray-500' : 'text-orange-700'}`}>
+                                        IA Flash
+                                    </p>
+                                    <p className={`text-xs font-semibold ${!hasAnyPhoto ? 'text-gray-400' : 'text-orange-600'}`}>
+                                        {!hasAnyPhoto ? 'N/A' : 'Activo'}
+                                    </p>
                                 </div>
                             </div>
                         </div>
@@ -500,15 +595,25 @@ export const Result: React.FC<ResultProps> = ({
                                 </span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4 text-emerald-600" />
-                                <span className="text-emerald-800 flex items-center gap-1">
+                                {hasAnyPhoto ? (
+                                    <CheckCircle className="w-4 h-4 text-emerald-600" />
+                                ) : (
+                                    <XCircle className="w-4 h-4 text-red-600" />
+                                )}
+                                <span className={`flex items-center gap-1 ${hasAnyPhoto ? 'text-emerald-800' : 'text-red-800'}`}>
                                     <Sparkles className="w-3 h-3" />
-                                    Análisis biométrico activo
+                                    {hasAnyPhoto ? 'Análisis biométrico activo' : 'Análisis biométrico no disponible'}
                                 </span>
                             </div>
-                            <p className="text-emerald-700 font-semibold mt-4 p-3 bg-emerald-100 rounded-lg border border-emerald-200 flex items-center gap-2">
+                            <p className={`font-semibold mt-4 p-3 rounded-lg border flex items-center gap-2 ${
+                                hasAnyPhoto 
+                                    ? 'text-emerald-700 bg-emerald-100 border-emerald-200' 
+                                    : 'text-amber-700 bg-amber-100 border-amber-200'
+                            }`}>
                                 <Bot className="w-4 h-4" />
-                                Análisis completado exitosamente
+                                {hasAnyPhoto 
+                                    ? 'Análisis completado exitosamente' 
+                                    : 'Análisis completado con limitaciones'}
                             </p>
                         </div>
                     </div>

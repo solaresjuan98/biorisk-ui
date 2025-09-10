@@ -1,7 +1,8 @@
+import { PREDICTION_API_URL } from "@/config";
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "http://localhost:8000/", // URL base de tu backend
+  baseURL: PREDICTION_API_URL, // URL base de tu backend
   headers: {
     "Content-Type": "application/json",
   },

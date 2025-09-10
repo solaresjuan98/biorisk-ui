@@ -1,0 +1,2 @@
+export const PREDICTION_API_URL = process.env.VITE_API_PREDICTION_URL;
+export const MEDIAPIPE_API_URL = process.env.VITE_API_MEDIAPIPE_URL;

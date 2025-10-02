@@ -1,3 +1,4 @@
+import { API_THRESHOLD } from '@/config';
 import type { AIInsight, AnalisisRiesgo, DatosRenap, Explicacion, Prediccion } from '@/interfaces';
 import { AlertCircle, BarChart3, Bot, Brain, Briefcase, Calendar, CheckCircle, Clock, Cpu, DollarSign, Eye,  MapPin, Sparkles, Target, TrendingUp, User, Users, XCircle, Zap } from 'lucide-react';
 import React from 'react';
@@ -296,16 +297,22 @@ export const Result: React.FC<ResultProps> = ({
                             {/* Decisión Principal */}
                             <div className={`p-6 rounded-xl border-2 ${getDecisionBg(prediccion.clasificacion)} mb-6 bg-white`}>
                                 <div className={`flex items-center gap-4 ${getDecisionColor(prediccion.clasificacion)} mb-4`}>
-                                    {prediccion.clasificacion === "NO_MORA" ?
+                                    {/* {prediccion.clasificacion === "NO_MORA" ?
+                                        <CheckCircle className="w-8 h-8" /> :
+                                        <XCircle className="w-8 h-8" />
+                                    } */}
+                                    {
+                                       ( prediccion.probabilidad_mora < API_THRESHOLD) ? 
                                         <CheckCircle className="w-8 h-8" /> :
                                         <XCircle className="w-8 h-8" />
                                     }
                                     <span className="text-3xl font-bold">
-                                        {prediccion.clasificacion === "NO_MORA" ? "NO MORA" : "RIESGO DE MORA"}
+                                        {/* {prediccion.clasificacion === "NO_MORA" ? "NO MORA" : "RIESGO DE MORA"} */}
+                                        {( prediccion.probabilidad_mora < API_THRESHOLD) ? "NO MORA" : "RIESGO DE MORA"}
                                     </span>
                                     <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold flex items-center gap-1">
                                         <Bot className="w-3 h-3" />
-                                        IA Decidió
+                                        IA Recomienda
                                     </div>
                                 </div>
 
@@ -334,7 +341,8 @@ export const Result: React.FC<ResultProps> = ({
                                             Umbral ML
                                         </p>
                                         <p className="text-lg font-bold text-gray-700">
-                                            {(threshold * 100).toFixed(1)}%
+                                            {/* {(threshold * 100).toFixed(1)}% */}
+                                            {(API_THRESHOLD * 100).toFixed(1)}%
                                         </p>
                                     </div>
                                     <div>
@@ -548,7 +556,8 @@ export const Result: React.FC<ResultProps> = ({
                                     <BarChart3 className="w-3 h-3" />
                                     Umbral IA:
                                 </span>
-                                <span className="font-medium">{(threshold * 100).toFixed(0)}%</span>
+                                {/* <span className="font-medium">{(threshold * 100).toFixed(0)}%</span> */}
+                                <span className="font-medium">{(API_THRESHOLD * 100).toFixed(0)}%</span>
                             </div>
                             <div className="flex justify-between text-gray-900">
                                 <span className="text-gray-600 flex items-center gap-1">

@@ -1,4 +1,3 @@
-
 import { useEffect, useRef, useState } from 'react'
 
 export const useCamera = () => {
@@ -12,28 +11,39 @@ export const useCamera = () => {
 
 
     const openCamera = async () => {
-
         try {
             if (!navigator.mediaDevices?.getUserMedia) {
                 // Fallback (móviles): usa la cámara del dispositivo vía input capture
                 fileInputRef.current?.click();
                 return;
             }
+
+            // Primero mostrar la UI para que el videoRef esté disponible
+            setIsCameraOpen(true);
+            
+            // Pequeño delay para asegurar que el DOM se actualice
+            await new Promise(resolve => setTimeout(resolve, 100));
+            
             const stream = await navigator.mediaDevices.getUserMedia({
                 video: { facingMode: { ideal: "environment" } },
                 audio: false,
             });
+            
             streamRef.current = stream;
+            
             if (videoRef.current) {
                 videoRef.current.srcObject = stream;
-                await videoRef.current.play();
+                
+                // Agregar event listener para cuando el video esté listo
+                videoRef.current.onloadedmetadata = () => {
+                    videoRef.current?.play();
+                };
             }
-            setIsCameraOpen(true);
         } catch (error) {
             console.error(error);
+            setIsCameraOpen(false); // Cerrar si hay error
             fileInputRef.current?.click();
         }
-
     }
 
     const closeCamera = () => {
@@ -73,11 +83,9 @@ export const useCamera = () => {
         };
     }, []);
 
-
     return {
         isCameraOpen, photoDataUrl, setPhotoDataUrl,
         videoRef, canvasRef, fileInputRef,
         openCamera, closeCamera, capturePhoto, onFileCapture
-
     }
 }

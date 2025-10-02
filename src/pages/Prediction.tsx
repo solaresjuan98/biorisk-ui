@@ -32,6 +32,9 @@ const BioRiskAI = () => {
     const [aiProcessingSteps, setAiProcessingSteps] = useState<string[]>([]);
     const [currentStepIndex, setCurrentStepIndex] = useState(0);
 
+    // *** NUEVO ESTADO PARA CONTROLAR EL BOTÓN NUEVA CONSULTA ***
+    const [hasResults, setHasResults] = useState(false);
+
     // colores
     const [bgColor, setBgColor] = useState('bg-gray-100');
     const [bgCode, setBgCode] = useState<string>("");
@@ -58,6 +61,38 @@ const BioRiskAI = () => {
     const [isProcessingImage, setIsProcessingImage] = useState(false);
     const [hasProcessedOnce, setHasProcessedOnce] = useState(false);
     const [cameraBase64Photo, setCameraBase64Photo] = useState("");
+
+    // *** NUEVA FUNCIÓN PARA REINICIAR EL FORMULARIO ***
+    const handleNuevaConsulta = () => {
+        // Reiniciar estados del formulario
+        setCui('');
+        setRegion('');
+        setEdad(0);
+        setSectorEconomico('');
+        setProfesion('');
+        setEstadoCivil('');
+        setDependientes(0);
+        setPhotoDataUrl(null);
+        
+        // Reiniciar estados de procesamiento
+        setAiProcessingSteps([]);
+        setProcessingStep('');
+        setCurrentStepIndex(0);
+        setResultados(null);
+        setSmartInsights([]);
+        
+        // Reiniciar estados de imagen
+        setShowProcessedImage(false);
+        setIsProcessingImage(false);
+        setHasProcessedOnce(false);
+        setCameraBase64Photo("");
+        
+        // Ocultar botón nueva consulta
+        setHasResults(false);
+        
+        // Cerrar cámara si está abierta
+        closeCamera();
+    };
 
     // Generación de insights inteligentes con IA - ACTUALIZADA para nueva estructura
     const generateAIInsights = (data: PredictionResponse) => {
@@ -191,7 +226,7 @@ const BioRiskAI = () => {
             return;
         }
 
-        console.log(photoDataUrl);
+        // console.log(photoDataUrl);
 
         setLoading(true);
         setProcessingStep('');
@@ -230,6 +265,9 @@ const BioRiskAI = () => {
                             setSmartInsights(prev => [...prev, insight]);
                         }, (index + 1) * 600);
                     });
+
+                    // *** MOSTRAR EL BOTÓN NUEVA CONSULTA DESPUÉS DE PROCESAR ***
+                    setHasResults(true);
                 } else {
                     alert('No se recibieron datos válidos del servidor');
                 }
@@ -268,7 +306,7 @@ const BioRiskAI = () => {
                 {/* Header con emphasis en IA */}
                 <Header />
 
-                {/* Búsqueda con IA Enhancement - CON TODOS LOS PROPS */}
+                {/* Búsqueda con IA Enhancement - CON TODOS LOS PROPS INCLUYENDO NUEVA CONSULTA */}
                 <ClientForm
                     cui={cui}
                     setCui={setCui}
@@ -287,6 +325,8 @@ const BioRiskAI = () => {
                     photoDataUrl={photoDataUrl}
                     setPhotoDataUrl={setPhotoDataUrl}
                     handleBuscar={handleBuscar}
+                    handleNuevaConsulta={handleNuevaConsulta} // *** NUEVA FUNCIÓN ***
+                    hasResults={hasResults} // *** NUEVO ESTADO ***
                     loading={loading}
                     aiProcessingSteps={aiProcessingSteps}
                     processingStep={processingStep}

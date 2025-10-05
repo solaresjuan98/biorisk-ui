@@ -9,12 +9,15 @@ interface PredictionBody {
 
 interface AnalyzeCuiBody {
     cui: string;
-    region: string;
+    // region: string;
+    departamento: string;
+    municipio: string;
     edad: number;
     sector_economico: string;
     profesion: string;
     estado_civil: string;
     dependientes: number;
+    foto: string;
 }
 
 
@@ -37,24 +40,31 @@ export const getPrediction = async ({ dpi }: PredictionBody) => {
 
 export const analyzeCui = async ({
     cui,
-    region,
+    departamento,
+    municipio,
     edad,
     sector_economico,
     profesion,
     estado_civil,
-    dependientes
+    dependientes,
+    foto,
 }: AnalyzeCuiBody) => {
     try {
+        console.log(foto);
+        
         const { data } = await api.post<PredictionResponse>(
             "analyze_cui?explain=true",
             {
                 cui,
-                region,
+                departamento,
+                municipio,
+                region: '', // Mantener para compatibilidad hacia atrás
                 edad,
                 sector_economico,
                 profesion,
                 estado_civil,
-                dependientes
+                dependientes,
+                foto
             },
             { headers: { "Content-Type": "application/json" } }
         );
@@ -62,6 +72,8 @@ export const analyzeCui = async ({
 
     } catch (error) {
         console.error("Error analyzing CUI:", error);
-        return {} as PredictionResponse;
+        return {
+
+        } as PredictionResponse;
     }
 }

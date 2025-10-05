@@ -68,6 +68,8 @@ export interface DatosRenap {
     vecindad:          string;
     foto_disponible:   boolean;
     foto:               string;
+    municipio:          string;
+    departamento:      string;
 }
 
 export interface LugarNacimiento {

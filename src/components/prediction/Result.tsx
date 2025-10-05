@@ -78,6 +78,8 @@ export const Result: React.FC<ResultProps> = ({
         }
         return null;
     };
+    console.log(threshold);
+    
 
     const hasAnyPhoto = cameraBase64Photo || datos_renap.foto;
     const isClickable = hasAnyPhoto && !hasProcessedOnce;
@@ -295,8 +297,8 @@ export const Result: React.FC<ResultProps> = ({
                         {/* Panel principal de resultado */}
                         <div className="lg:col-span-3">
                             {/* Decisión Principal */}
-                            <div className={`p-6 rounded-xl border-2 ${getDecisionBg(prediccion.clasificacion)} mb-6 bg-white`}>
-                                <div className={`flex items-center gap-4 ${getDecisionColor(prediccion.clasificacion)} mb-4`}>
+                            <div className={`p-6 rounded-xl border-2 ${prediccion.probabilidad_mora < API_THRESHOLD ? 'border-green-200' : 'border-red-200'} mb-6 bg-white`}>
+                                <div className={`flex items-center gap-4 ${prediccion.probabilidad_mora < API_THRESHOLD ? 'text-green-600' : 'text-red-600'} mb-4`}>
                                     {/* {prediccion.clasificacion === "NO_MORA" ?
                                         <CheckCircle className="w-8 h-8" /> :
                                         <XCircle className="w-8 h-8" />
@@ -351,7 +353,7 @@ export const Result: React.FC<ResultProps> = ({
                                             Categoría Riesgo
                                         </p>
                                         <p className="text-lg font-bold text-purple-600">
-                                            {analisis_riesgo.regional.nivel}
+                                            {prediccion.categoria_riesgo}
                                         </p>
                                     </div>
                                 </div>
@@ -388,7 +390,7 @@ export const Result: React.FC<ResultProps> = ({
                                             Edad:
                                         </span>
                                         <span className="font-medium">
-                                            {analisis_riesgo.demografico.edad} años
+                                            {analisis_riesgo.demografico.edad} AÑOS
                                         </span>
                                     </div>
                                     <div>
@@ -397,7 +399,7 @@ export const Result: React.FC<ResultProps> = ({
                                             Estado Civil:
                                         </span>
                                         <span className="font-medium">
-                                            {formatEstadoCivil(datos_renap.estado_civil)}
+                                            {formatEstadoCivil(analisis_riesgo.demografico.estado_civil).toUpperCase()}
                                         </span>
                                     </div>
                                     <div>
@@ -405,14 +407,14 @@ export const Result: React.FC<ResultProps> = ({
                                             <Briefcase className="w-3 h-3" />
                                             Ocupación:
                                         </span>
-                                        <span className="font-medium">{datos_renap.ocupacion}</span>
+                                        <span className="font-medium">{analisis_riesgo.ocupacion.profesion_declarada.toUpperCase()}</span>
                                     </div>
                                     <div>
                                         <span className="text-slate-600 block mb-1 flex items-center gap-1">
                                             <MapPin className="w-3 h-3" />
                                             Vecindad:
                                         </span>
-                                        <span className="font-medium">{datos_renap.vecindad}</span>
+                                        <span className="font-medium">{datos_renap.municipio}, {datos_renap.departamento}</span>
                                     </div>
                                 </div>
                             </div>
@@ -649,8 +651,8 @@ export const Result: React.FC<ResultProps> = ({
                             </div>
                             <div className="space-y-3 text-sm">
                                 <div>
-                                    <span className="text-gray-600">Ocupación RENAP:</span>
-                                    <p className="font-medium">{analisis_riesgo.ocupacion.ocupacion_renap}</p>
+                                    <span className="text-gray-600">Ocupación:</span>
+                                    <p className="font-medium">{analisis_riesgo.ocupacion.profesion_declarada}</p>
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Categoría:</span>
@@ -687,7 +689,8 @@ export const Result: React.FC<ResultProps> = ({
                             <div className="space-y-3 text-sm">
                                 <div>
                                     <span className="text-gray-600">Región:</span>
-                                    <p className="font-medium">{analisis_riesgo.regional.region}</p>
+                                    <p className="font-medium">{datos_renap.municipio}, {datos_renap.departamento}</p>
+                                    {/* <p className="font-medium">{analisis_riesgo.regional.region}</p> */}
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Nivel:</span>
@@ -763,7 +766,7 @@ export const Result: React.FC<ResultProps> = ({
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Fuente Edad:</span>
-                                    <p className="font-medium text-xs">{analisis_riesgo.demografico.fuente_edad}</p>
+                                    <p className="font-medium text-xs">Usuario</p>
                                 </div>
                             </div>
                         </div>
@@ -783,7 +786,7 @@ export const Result: React.FC<ResultProps> = ({
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Fuente:</span>
-                                    <p className="font-medium">{analisis_riesgo.imagen.fuente}</p>
+                                    <p className="font-medium">Usuario</p>
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Análisis Facial:</span>

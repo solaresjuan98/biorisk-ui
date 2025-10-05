@@ -7,24 +7,28 @@ import {
     Calendar,
     Camera,
     CheckCircle,
+    ChevronDown,
     Cpu,
     Heart,
     MapPin,
     User,
     Users,
     X,
-    ChevronDown
+    RefreshCw
 } from "lucide-react";
+import { SECTORES_ECONOMICOS, getProfesionesBySector } from '@/config';
 
-// Definir las interfaces para los props
+// Importar catálogos geográficos
+import { DEPARTAMENTOS, getMunicipiosByDepartamento } from '@/config';
+
+// Definir las interfaces para los props (SIN isTogglingCamera)
 interface ClientFormProps {
-    // Estados del formulario
     cui: string;
     setCui: (value: string) => void;
-
-    // Nuevos estados para el formulario extendido
-    region: string;
-    setRegion: (value: string) => void;
+    departamento: string;
+    setDepartamento: (value: string) => void;
+    municipio: string;
+    setMunicipio: (value: string) => void;
     edad: number;
     setEdad: (value: number) => void;
     sectorEconomico: string;
@@ -35,41 +39,146 @@ interface ClientFormProps {
     setEstadoCivil: (value: string) => void;
     dependientes: number;
     setDependientes: (value: number) => void;
-
     photoDataUrl: string | null;
     setPhotoDataUrl: (value: string | null) => void;
     isCameraOpen: boolean;
     loading: boolean;
-
-    // Estados de procesamiento IA
     aiProcessingSteps: string[];
     processingStep: string;
     currentStepIndex: number;
     processingSteps: string[];
-
-    // Estado para controlar si se han procesado resultados
     hasResults: boolean;
-
-    // Funciones de manejo
     handleBuscar: () => void;
     handleNuevaConsulta: () => void;
     openCamera: () => Promise<void>;
     closeCamera: () => void;
     capturePhoto: () => void;
     onFileCapture: (e: React.ChangeEvent<HTMLInputElement>) => void;
-
-    // Refs
     videoRef: React.RefObject<HTMLVideoElement | null>;
     canvasRef: React.RefObject<HTMLCanvasElement | null>;
     fileInputRef: React.RefObject<HTMLInputElement | null>;
+    facingMode: 'user' | 'environment';
+    toggleCamera: () => void;
+    hasMultipleCameras: boolean;
+    processingRef: React.RefObject<HTMLDivElement | null>;
 }
 
+// Componente de Select Personalizado
+interface CustomSelectProps {
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; label: string }[];
+    placeholder: string;
+    disabled?: boolean;
+    icon?: React.ReactNode;
+}
+
+const CustomSelect: React.FC<CustomSelectProps> = ({
+    value,
+    onChange,
+    options,
+    placeholder,
+    disabled = false,
+    icon
+}) => {
+    const [isOpen, setIsOpen] = useState(false);
+    const [searchTerm, setSearchTerm] = useState('');
+    const dropdownRef = useRef<HTMLDivElement>(null);
+    const inputRef = useRef<HTMLInputElement>(null);
+
+    const filteredOptions = options.filter(option =>
+        option.label.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+
+    const selectedOption = options.find(opt => opt.value === value);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+                setIsOpen(false);
+                setSearchTerm('');
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => document.removeEventListener('mousedown', handleClickOutside);
+    }, []);
+
+    useEffect(() => {
+        if (isOpen && inputRef.current) {
+            inputRef.current.focus();
+        }
+    }, [isOpen]);
+
+    const handleSelect = (optionValue: string) => {
+        onChange(optionValue);
+        setIsOpen(false);
+        setSearchTerm('');
+    };
+
+    return (
+        <div className="relative" ref={dropdownRef}>
+            <div
+                onClick={() => !disabled && setIsOpen(!isOpen)}
+                className={`w-full px-4 py-3 bg-white border border-gray-300 rounded-xl flex items-center justify-between cursor-pointer transition-all ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'hover:border-blue-400'
+                    } ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
+            >
+                <div className="flex items-center gap-2 flex-1">
+                    {icon && <span className="text-gray-600">{icon}</span>}
+                    <span className={value ? 'text-gray-900' : 'text-gray-500'}>
+                        {selectedOption ? selectedOption.label : placeholder}
+                    </span>
+                </div>
+                <ChevronDown className={`w-5 h-5 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+            </div>
+
+            {isOpen && !disabled && (
+                <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-hidden">
+                    <div className="p-2 border-b border-gray-200">
+                        <input
+                            ref={inputRef}
+                            type="text"
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            placeholder="Buscar..."
+                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            onClick={(e) => e.stopPropagation()}
+                        />
+                    </div>
+                    <div className="overflow-y-auto max-h-48">
+                        {filteredOptions.length > 0 ? (
+                            filteredOptions.map((option) => (
+                                <div
+                                    key={option.value}
+                                    onClick={() => handleSelect(option.value)}
+                                    className={`px-4 py-3 cursor-pointer transition-colors ${option.value === value
+                                        ? 'bg-green-50 text-gray-900 font-medium'
+                                        : 'hover:bg-gray-50 text-gray-700'
+                                        }`}
+                                >
+                                    {option.label}
+                                </div>
+                            ))
+                        ) : (
+                            <div className="px-4 py-3 text-gray-500 text-center">
+                                No se encontraron resultados
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+        </div>
+    );
+};
+
+
 export const ClientForm: React.FC<ClientFormProps> = ({
-    // Estados del formulario
     cui,
     setCui,
-    region,
-    setRegion,
+    departamento,
+    setDepartamento,
+    municipio,
+    setMunicipio,
     edad,
     setEdad,
     sectorEconomico,
@@ -84,97 +193,81 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     setPhotoDataUrl,
     isCameraOpen,
     loading,
-
-    // Estados de procesamiento IA
     aiProcessingSteps,
     processingStep,
     currentStepIndex,
     processingSteps,
     hasResults,
-
-    // Funciones de manejo
     handleBuscar,
     handleNuevaConsulta,
     openCamera,
     closeCamera,
     capturePhoto,
     onFileCapture,
-
-    // Refs
     videoRef,
     canvasRef,
     fileInputRef,
+    facingMode,
+    hasMultipleCameras,
+    toggleCamera,
+    processingRef
 }) => {
 
-    // Estados para el autocompletado del sector económico
-    const [showSuggestions, setShowSuggestions] = useState(false);
-    const [filteredSuggestions, setFilteredSuggestions] = useState<string[]>([]);
-    const sectorInputRef = useRef<HTMLInputElement>(null);
+    const [cuiError, setCuiError] = useState('');
+    const [edadError, setEdadError] = useState('');
+
+    const profesionInputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
 
-    // Lista de sectores económicos sugeridos
-    const sectorSuggestions = [
-        "Agricultura",
-        "Ganadería", 
-        "Pesca",
-        "Comercio",
-        "Ventas",
-        "Servicios",
-        "Salud",
-        "Educación",
-        "Industria",
-        "Manufactura",
-        "Construcción",
-        "Transporte"
-    ];
 
-    // Función para filtrar sugerencias
-    const filterSuggestions = (value: string) => {
-        if (!value.trim()) {
-            setFilteredSuggestions([]);
-            setShowSuggestions(false);
-            return;
-        }
 
-        const filtered = sectorSuggestions.filter(suggestion =>
-            suggestion.toLowerCase().includes(value.toLowerCase())
-        );
-        
-        setFilteredSuggestions(filtered);
-        setShowSuggestions(filtered.length > 0);
-    };
+    // Opciones para los selects personalizados
+    const sectoresOptions = SECTORES_ECONOMICOS.map(sector => ({
+        value: sector,
+        label: sector
+    }));
 
-    // Manejar cambios en el input del sector económico
-    const handleSectorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-        const value = e.target.value;
+    const profesionesOptions = getProfesionesBySector(sectorEconomico).map(prof => ({
+        value: prof,
+        label: prof
+    }));
+
+    // Opciones para departamentos
+    const departamentosOptions = DEPARTAMENTOS.map(dept => ({
+        value: dept,
+        label: dept
+    }));
+
+    // Opciones para municipios basados en el departamento seleccionado
+    const municipiosOptions = getMunicipiosByDepartamento(departamento).map(mun => ({
+        value: mun,
+        label: mun
+    }));
+
+    // Manejar cambios en el select del sector económico
+    const handleSectorChange = (value: string) => {
         setSectorEconomico(value);
-        filterSuggestions(value);
+        setProfesion('');
     };
 
-    // Manejar selección de sugerencia
-    const handleSuggestionSelect = (suggestion: string) => {
-        setSectorEconomico(suggestion);
-        setShowSuggestions(false);
-        sectorInputRef.current?.focus();
-    };
+    // Manejar cambios en el select del departamento
+    const handleDepartamentoChange = (value: string) => {
+        console.log("value", value);
 
-    // Manejar teclas en el input del sector
-    const handleSectorKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
-        if (e.key === 'Escape') {
-            setShowSuggestions(false);
-        }
+        setDepartamento(value);
+        setMunicipio('');
     };
 
     // Cerrar sugerencias al hacer clic fuera
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
             if (
-                sectorInputRef.current &&
-                !sectorInputRef.current.contains(event.target as Node) &&
+                profesionInputRef.current &&
+                !profesionInputRef.current.contains(event.target as Node) &&
                 suggestionsRef.current &&
                 !suggestionsRef.current.contains(event.target as Node)
             ) {
-                setShowSuggestions(false);
+                // setShowSuggestions(false);
             }
         };
 
@@ -187,7 +280,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     // Función para validar si el formulario está completo
     const isFormValid = () => {
         return cui.trim() &&
-            region.trim() &&
+            departamento.trim() &&
+            municipio.trim() &&
             edad > 0 &&
             sectorEconomico.trim() &&
             profesion.trim() &&
@@ -198,7 +292,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     return (
         <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-8">
             {!loading && (
-                <div className="space-y-6">
+                <div className="space-y-6" ref={processingRef}>
                     {/* Sección 1: Identificación */}
                     <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 md:p-6 border border-blue-100">
                         <div className="flex items-center gap-2 mb-4">
@@ -220,36 +314,66 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                         type="text"
                                         name="cui"
                                         value={cui}
-                                        onChange={(e) => setCui(e.target.value)}
+                                        onChange={(e) => {
+                                            const value = e.target.value.replace(/\D/g, '').slice(0, 13);
+                                            setCui(value);
+                                            if (cuiError) setCuiError(''); // Limpiar error al escribir
+                                        }}
+                                        onBlur={(e) => {
+                                            const value = e.target.value.trim();
+                                            if (value.length > 0 && value.length !== 13) {
+                                                setCuiError('El CUI debe tener exactamente 13 dígitos');
+                                            } else {
+                                                setCuiError('');
+                                            }
+                                        }}
                                         placeholder="Ingresa el CUI para análisis..."
-                                        className="w-full pl-12 pr-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                                        onKeyPress={(e) => e.key === 'Enter' && isFormValid() && handleBuscar()}
+                                        className={`w-full pl-12 pr-4 py-3 bg-white border ${cuiError ? 'border-red-500' : 'border-gray-300'
+                                            } rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900`}
+                                        onKeyPress={(e) => e.key === 'Enter' && isFormValid() && !cuiError && handleBuscar()}
                                         autoComplete="off"
                                         data-1p-ignore="true"
                                         data-lpignore="true"
                                         data-form-type="other"
+                                        maxLength={13}
                                     />
+                                    {cuiError && (
+                                        <p className="mt-1 text-sm text-red-600">{cuiError}</p>
+                                    )}
                                 </div>
                             </div>
 
-                            {/* Región */}
+                            {/* Departamento */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <MapPin className="w-4 h-4 inline mr-1" />
-                                    Región *
+                                    Departamento *
                                 </label>
-                                <input
-                                    type="text"
-                                    name="region"
-                                    value={region}
-                                    onChange={(e) => setRegion(e.target.value)}
-                                    placeholder="Ej: Guatemala, Quetzaltenango..."
-                                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                                <CustomSelect
+                                    value={departamento}
+                                    onChange={handleDepartamentoChange}
+                                    options={departamentosOptions}
+                                    placeholder="Selecciona un departamento"
+                                    icon={<MapPin className="w-4 h-4" />}
+                                />
+                            </div>
+
+                            {/* Municipio */}
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                    Municipio *
+                                </label>
+                                <CustomSelect
+                                    value={municipio}
+                                    onChange={setMunicipio}
+                                    options={municipiosOptions}
+                                    placeholder={departamento ? "Selecciona un municipio" : "Selecciona primero un departamento"}
+                                    disabled={!departamento}
+                                    icon={<MapPin className="w-4 h-4" />}
                                 />
                             </div>
 
                             {/* Edad */}
-                            <div>
+                            <div className="lg:col-span-2">
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     <Calendar className="w-4 h-4 inline mr-1" />
                                     Edad *
@@ -262,6 +386,17 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                     placeholder="Edad en años"
                                     min="18"
                                     max="100"
+                                    onBlur={
+                                        (e) => {
+                                            const value = parseInt(e.target.value);
+                                            if (value < 18 || value > 100) {
+                                                setEdadError('La edad debe estar entre 18 y 100 años');
+                                                setEdad(18);
+                                            } else {
+                                                setEdadError('');
+                                            }
+                                        }
+                                    }
                                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                                 />
                             </div>
@@ -276,87 +411,57 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Sector Económico con Autocompletado */}
-                            <div className="relative">
+                            {/* Sector Económico - SELECT con diseño mejorado */}
+                            <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Sector Económico *
                                 </label>
-                                <div className="relative">
-                                    <input
-                                        ref={sectorInputRef}
-                                        type="text"
-                                        name="sector_economico"
-                                        value={sectorEconomico}
-                                        onChange={handleSectorChange}
-                                        onKeyDown={handleSectorKeyDown}
-                                        onFocus={() => filterSuggestions(sectorEconomico)}
-                                        placeholder="Ej: Comercio, Agricultura, Servicios..."
-                                        className="w-full px-4 py-3 pr-10 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
-                                        autoComplete="off"
-                                    />
-                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showSuggestions ? 'rotate-180' : ''}`} />
-                                    </div>
-                                </div>
-
-                                {/* Dropdown de sugerencias */}
-                                {showSuggestions && (
-                                    <div 
-                                        ref={suggestionsRef}
-                                        className="absolute z-50 w-full mt-1 bg-white border border-gray-300 rounded-xl shadow-lg max-h-60 overflow-y-auto"
-                                    >
-                                        {filteredSuggestions.map((suggestion, index) => (
-                                            <div
-                                                key={index}
-                                                onClick={() => handleSuggestionSelect(suggestion)}
-                                                className="px-4 py-3 hover:bg-green-50 cursor-pointer transition-colors border-b border-gray-100 last:border-b-0 text-gray-900"
-                                            >
-                                                {suggestion}
-                                            </div>
-                                        ))}
-                                        {filteredSuggestions.length === 0 && (
-                                            <div className="px-4 py-3 text-gray-500 text-sm">
-                                                No se encontraron sugerencias
-                                            </div>
-                                        )}
-                                    </div>
-                                )}
+                                <CustomSelect
+                                    value={sectorEconomico}
+                                    onChange={handleSectorChange}
+                                    options={sectoresOptions}
+                                    placeholder="Selecciona un sector"
+                                />
                             </div>
 
-                            {/* Profesión */}
+                            {/* Profesión - SELECT con diseño mejorado */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     Profesión *
                                 </label>
-                                <input
-                                    type="text"
-                                    name="profesion"
+                                <CustomSelect
                                     value={profesion}
-                                    onChange={(e) => setProfesion(e.target.value)}
-                                    placeholder="Ej: Comerciante, Agricultor, Contador..."
-                                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                                    onChange={setProfesion}
+                                    options={profesionesOptions}
+                                    placeholder={sectorEconomico ? "Selecciona una profesión" : "Selecciona primero un sector"}
+                                    disabled={!sectorEconomico}
                                 />
                             </div>
 
-                            {/* Estado Civil */}
+                            {/* Estado Civil - SELECT con diseño mejorado */}
                             <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-2">
                                     <Heart className="w-4 h-4 inline mr-1" />
                                     Estado Civil *
                                 </label>
-                                <select
-                                    name="estado_civil"
-                                    value={estadoCivil}
-                                    onChange={(e) => setEstadoCivil(e.target.value)}
-                                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
-                                >
-                                    <option value="">Selecciona estado civil</option>
-                                    <option value="Soltero">Soltero/a</option>
-                                    <option value="Casado">Casado/a</option>
-                                    <option value="Divorciado">Divorciado/a</option>
-                                    <option value="Viudo">Viudo/a</option>
-                                    <option value="Union Libre">Unión Libre</option>
-                                </select>
+                                <div className="relative">
+                                    <select
+                                        name="estado_civil"
+                                        value={estadoCivil}
+                                        onChange={(e) => setEstadoCivil(e.target.value)}
+                                        className="w-full px-4 py-3 pr-10 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 appearance-none cursor-pointer"
+                                    >
+                                        <option value="">Selecciona estado civil</option>
+                                        <option value="Soltero">Soltero/a</option>
+                                        <option value="Casado">Casado/a</option>
+                                        <option value="Divorciado">Divorciado/a</option>
+                                        <option value="Viudo">Viudo/a</option>
+                                        <option value="Union Libre">Unión Libre</option>
+                                    </select>
+                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                                    </div>
+                                </div>
                             </div>
 
                             {/* Personas Dependientes */}
@@ -434,19 +539,42 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                         playsInline
                                         muted
                                     />
+
+                                    {/* Botón para cambiar cámara - SIMPLIFICADO */}
+                                    {hasMultipleCameras && (
+                                        <button
+                                            type="button"
+                                            onClick={toggleCamera}
+                                            className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-md hover:bg-white/30 rounded-full transition-all duration-200"
+                                            title={facingMode === 'user' ? 'Cambiar a cámara trasera' : 'Cambiar a cámara frontal'}
+                                        >
+                                            <RefreshCw className="w-5 h-5 text-white" />
+                                        </button>
+                                    )}
+
+                                    {/* Indicador de cámara activa */}
+                                    <div className="absolute top-4 left-4 px-3 py-1 bg-green-600/80 backdrop-blur-md rounded-full">
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
+                                            <span className="text-xs font-medium">
+                                                {facingMode === 'user' ? 'Cámara frontal' : 'Cámara trasera'}
+                                            </span>
+                                        </div>
+                                    </div>
                                 </div>
+
                                 <div className="flex items-center justify-center gap-3 mt-4">
                                     <button
                                         type="button"
                                         onClick={capturePhoto}
-                                        className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold"
+                                        className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold transition-colors"
                                     >
                                         Capturar
                                     </button>
                                     <button
                                         type="button"
                                         onClick={closeCamera}
-                                        className="px-5 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold"
+                                        className="px-5 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition-colors"
                                     >
                                         Cancelar
                                     </button>

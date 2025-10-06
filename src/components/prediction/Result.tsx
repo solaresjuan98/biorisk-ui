@@ -1,6 +1,6 @@
 import { API_THRESHOLD } from '@/config';
-import type { AIInsight, AnalisisRiesgo, DatosRenap, Explicacion, Prediccion } from '@/interfaces';
-import { AlertCircle, BarChart3, Bot, Brain, Briefcase, Calendar, CheckCircle, Clock, Cpu, DollarSign, Eye,  MapPin, Sparkles, Target, TrendingUp, User, Users, XCircle, Zap } from 'lucide-react';
+import type { AIInsight, AnalisisFeature, AnalisisRiesgo, DatosRenap, Explicacion, Prediccion } from '@/interfaces';
+import { AlertCircle, BarChart3, Bot, Brain, Briefcase, Calendar, CheckCircle, Clock, Cpu, DollarSign, Eye, MapPin, Sparkles, Target, TrendingUp, User, Users, XCircle, Zap } from 'lucide-react';
 import React from 'react';
 
 // Props del componente
@@ -14,6 +14,9 @@ interface ResultProps {
     analisis_riesgo: AnalisisRiesgo;
     prediccion: Prediccion;
     explicacion: Explicacion;
+    analisis_features?: AnalisisFeature[];
+
+    // analisisFeatures: AnalisisFeature[];
 
     // Estados para manejo de imagen
     showProcessedImage: boolean;
@@ -49,7 +52,7 @@ export const Result: React.FC<ResultProps> = ({
     analisis_riesgo,
     prediccion,
     explicacion,
-
+    analisis_features,
     // Props adicionales
     showProcessedImage,
     cameraBase64Photo,
@@ -65,7 +68,7 @@ export const Result: React.FC<ResultProps> = ({
     getDecisionColor,
     getConfidenceColor,
     getInsightBg,
-    getPriorityColor,
+    getPriorityColor
 }) => {
     // Lógica para determinar imagen a mostrar
     const getImageSource = () => {
@@ -79,7 +82,9 @@ export const Result: React.FC<ResultProps> = ({
         return null;
     };
     console.log(threshold);
-    
+    // console.log(analisis);
+
+
 
     const hasAnyPhoto = cameraBase64Photo || datos_renap.foto;
     const isClickable = hasAnyPhoto && !hasProcessedOnce;
@@ -134,10 +139,10 @@ export const Result: React.FC<ResultProps> = ({
                                         className={`relative ${isClickable ? 'cursor-pointer group' : 'cursor-default'}`}
                                         onClick={isClickable ? handleImageProcess : undefined}
                                         title={
-                                            hasProcessedOnce 
-                                                ? "Ya procesado" 
-                                                : isClickable 
-                                                    ? "Click para análisis biométrico" 
+                                            hasProcessedOnce
+                                                ? "Ya procesado"
+                                                : isClickable
+                                                    ? "Click para análisis biométrico"
                                                     : "Análisis no disponible"
                                         }
                                     >
@@ -145,9 +150,8 @@ export const Result: React.FC<ResultProps> = ({
                                         <img
                                             src={imageSource!}
                                             alt="Foto de perfil"
-                                            className={`w-full object-cover aspect-[3/4] sm:aspect-[4/5] lg:aspect-auto lg:h-80 transition-all duration-1000 ${
-                                                showProcessedImage ? 'filter-none' : ''
-                                            } ${isClickable ? 'hover:brightness-110' : ''}`}
+                                            className={`w-full object-cover aspect-[3/4] sm:aspect-[4/5] lg:aspect-auto lg:h-80 transition-all duration-1000 ${showProcessedImage ? 'filter-none' : ''
+                                                } ${isClickable ? 'hover:brightness-110' : ''}`}
                                             onError={handleImageError}
                                         />
 
@@ -187,13 +191,12 @@ export const Result: React.FC<ResultProps> = ({
                                         )}
 
                                         {/* Badge de estado */}
-                                        <div className={`absolute top-3 right-3 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${
-                                            showProcessedImage 
-                                                ? 'bg-emerald-500' 
-                                                : cameraBase64Photo 
-                                                    ? 'bg-purple-500' 
-                                                    : 'bg-orange-500'
-                                        }`}>
+                                        <div className={`absolute top-3 right-3 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${showProcessedImage
+                                            ? 'bg-emerald-500'
+                                            : cameraBase64Photo
+                                                ? 'bg-purple-500'
+                                                : 'bg-orange-500'
+                                            }`}>
                                             {showProcessedImage ? (
                                                 <>
                                                     <Brain className="w-3 h-3" />
@@ -226,15 +229,14 @@ export const Result: React.FC<ResultProps> = ({
                             {/* Contexto de imagen con IA */}
                             <div className="grid grid-cols-3 gap-2 mt-4">
                                 {/* Badge principal - tipo de imagen */}
-                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${
-                                    !hasAnyPhoto 
-                                        ? 'bg-gray-50 border-gray-200' 
-                                        : showProcessedImage 
-                                            ? 'bg-emerald-50 border-emerald-200' 
-                                            : cameraBase64Photo 
-                                                ? 'bg-purple-50 border-purple-200'
-                                                : 'bg-blue-50 border-blue-200'
-                                }`}>
+                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${!hasAnyPhoto
+                                    ? 'bg-gray-50 border-gray-200'
+                                    : showProcessedImage
+                                        ? 'bg-emerald-50 border-emerald-200'
+                                        : cameraBase64Photo
+                                            ? 'bg-purple-50 border-purple-200'
+                                            : 'bg-blue-50 border-blue-200'
+                                    }`}>
                                     {!hasAnyPhoto ? (
                                         <>
                                             <User className="w-5 h-5 mx-auto mb-1 text-gray-400" />
@@ -263,11 +265,10 @@ export const Result: React.FC<ResultProps> = ({
                                 </div>
 
                                 {/* Badge de luz */}
-                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${
-                                    !hasAnyPhoto 
-                                        ? 'bg-gray-50 border-gray-200' 
-                                        : 'bg-green-50 border-green-200'
-                                }`}>
+                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${!hasAnyPhoto
+                                    ? 'bg-gray-50 border-gray-200'
+                                    : 'bg-green-50 border-green-200'
+                                    }`}>
                                     <Eye className={`w-5 h-5 mx-auto mb-1 ${!hasAnyPhoto ? 'text-gray-400' : 'text-green-600'}`} />
                                     <p className={`text-xs font-medium mb-1 ${!hasAnyPhoto ? 'text-gray-500' : 'text-green-700'}`}>
                                         IA Luz
@@ -278,11 +279,10 @@ export const Result: React.FC<ResultProps> = ({
                                 </div>
 
                                 {/* Badge de flash */}
-                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${
-                                    !hasAnyPhoto 
-                                        ? 'bg-gray-50 border-gray-200' 
-                                        : 'bg-orange-50 border-orange-200'
-                                }`}>
+                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${!hasAnyPhoto
+                                    ? 'bg-gray-50 border-gray-200'
+                                    : 'bg-orange-50 border-orange-200'
+                                    }`}>
                                     <Zap className={`w-5 h-5 mx-auto mb-1 ${!hasAnyPhoto ? 'text-gray-400' : 'text-orange-600'}`} />
                                     <p className={`text-xs font-medium mb-1 ${!hasAnyPhoto ? 'text-gray-500' : 'text-orange-700'}`}>
                                         IA Flash
@@ -304,13 +304,13 @@ export const Result: React.FC<ResultProps> = ({
                                         <XCircle className="w-8 h-8" />
                                     } */}
                                     {
-                                       ( prediccion.probabilidad_mora < API_THRESHOLD) ? 
-                                        <CheckCircle className="w-8 h-8" /> :
-                                        <XCircle className="w-8 h-8" />
+                                        (prediccion.probabilidad_mora < API_THRESHOLD) ?
+                                            <CheckCircle className="w-8 h-8" /> :
+                                            <XCircle className="w-8 h-8" />
                                     }
                                     <span className="text-3xl font-bold">
                                         {/* {prediccion.clasificacion === "NO_MORA" ? "NO MORA" : "RIESGO DE MORA"} */}
-                                        {( prediccion.probabilidad_mora < API_THRESHOLD) ? "NO MORA" : "RIESGO DE MORA"}
+                                        {(prediccion.probabilidad_mora < API_THRESHOLD) ? "NO MORA" : "RIESGO DE MORA"}
                                     </span>
                                     <div className="px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm font-semibold flex items-center gap-1">
                                         <Bot className="w-3 h-3" />
@@ -518,7 +518,37 @@ export const Result: React.FC<ResultProps> = ({
                             Factores Clave de IA
                         </h3>
                         <div className="space-y-3">
-                            {explicacion.contribuciones_top
+
+                        
+                            {analisis_features && analisis_features
+                                .sort((a, b) => b.analisis_persona - a.analisis_persona)
+                                // .slice(0, 6)
+                                .map((feature, index) => (
+                                    <div key={feature.feature} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                                        <div className="flex items-center gap-3 flex-1">
+                                            <span className="w-6 h-6 bg-gradient-to-r from-emerald-500 to-teal-500 text-white rounded-full flex items-center justify-center text-xs font-bold">
+                                                {index + 1}
+                                            </span>
+                                            <div className="flex flex-col">
+                                                <span className="text-sm capitalize text-gray-900 font-medium">
+                                                    {feature.feature.replace(/_/g, ' ')}
+                                                </span>
+                                                <span className="text-xs text-gray-500">
+                                                    {feature.categoria_feature}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="flex flex-col items-end">
+                                            <span className="text-sm font-bold text-emerald-600">
+                                                {feature.analisis_persona.toFixed(1)}%
+                                            </span>
+                                            {/* <span className="text-xs text-gray-500">
+                                                Importancia: {feature.importance.toFixed(1)}%
+                                            </span> */}
+                                        </div>
+                                    </div>
+                                ))}
+                            {/* {explicacion.contribuciones_top
                                 .sort((a, b) => Math.abs(b.contribucion) - Math.abs(a.contribucion))
                                 .slice(0, 6)
                                 .map((contrib, index) => (
@@ -535,7 +565,7 @@ export const Result: React.FC<ResultProps> = ({
                                             {(Math.abs(contrib.contribucion) * 100).toFixed(1)}%
                                         </span>
                                     </div>
-                                ))}
+                                ))} */}
                         </div>
                     </div>
 
@@ -561,6 +591,29 @@ export const Result: React.FC<ResultProps> = ({
                                 {/* <span className="font-medium">{(threshold * 100).toFixed(0)}%</span> */}
                                 <span className="font-medium">{(API_THRESHOLD * 100).toFixed(0)}%</span>
                             </div>
+                            <div className="flex justify-between text-gray-900">
+                                <span className="text-gray-600 flex items-center gap-1">
+                                    <User className="w-3 h-3" />
+                                    Peso Demográfico:
+                                </span>
+                                <span className="font-medium">
+                                    {prediccion.pesos_modelo.variables_demograficas
+                                        ? `${prediccion.pesos_modelo.variables_demograficas}%`
+                                        : 'N/A'}
+                                </span>
+                            </div>
+                            <div className="flex justify-between text-gray-900">
+                                <span className="text-gray-600 flex items-center gap-1">
+                                    <Eye className="w-3 h-3" />
+                                    Peso Facial:
+                                </span>
+                                <span className="font-medium">
+                                    {prediccion.pesos_modelo.variables_faciales
+                                        ? `${prediccion.pesos_modelo.variables_faciales}%`
+                                        : 'N/A'}
+                                </span>
+                            </div>
+
                             <div className="flex justify-between text-gray-900">
                                 <span className="text-gray-600 flex items-center gap-1">
                                     <TrendingUp className="w-3 h-3" />
@@ -616,14 +669,13 @@ export const Result: React.FC<ResultProps> = ({
                                     {hasAnyPhoto ? 'Análisis biométrico activo' : 'Análisis biométrico no disponible'}
                                 </span>
                             </div>
-                            <p className={`font-semibold mt-4 p-3 rounded-lg border flex items-center gap-2 ${
-                                hasAnyPhoto 
-                                    ? 'text-emerald-700 bg-emerald-100 border-emerald-200' 
-                                    : 'text-amber-700 bg-amber-100 border-amber-200'
-                            }`}>
+                            <p className={`font-semibold mt-4 p-3 rounded-lg border flex items-center gap-2 ${hasAnyPhoto
+                                ? 'text-emerald-700 bg-emerald-100 border-emerald-200'
+                                : 'text-amber-700 bg-amber-100 border-amber-200'
+                                }`}>
                                 <Bot className="w-4 h-4" />
-                                {hasAnyPhoto 
-                                    ? 'Análisis completado exitosamente' 
+                                {hasAnyPhoto
+                                    ? 'Análisis completado exitosamente'
                                     : 'Análisis completado con limitaciones'}
                             </p>
                         </div>
@@ -660,7 +712,7 @@ export const Result: React.FC<ResultProps> = ({
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Nivel de Riesgo:</span>
-                                    <p className={`font-bold ${analisis_riesgo.ocupacion.nivel_riesgo === 'Alto' ? 'text-red-600' : 
+                                    <p className={`font-bold ${analisis_riesgo.ocupacion.nivel_riesgo === 'Alto' ? 'text-red-600' :
                                         analisis_riesgo.ocupacion.nivel_riesgo === 'Medio' ? 'text-yellow-600' : 'text-green-600'}`}>
                                         {analisis_riesgo.ocupacion.nivel_riesgo}
                                     </p>
@@ -694,9 +746,9 @@ export const Result: React.FC<ResultProps> = ({
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Nivel:</span>
-                                    <p className={`font-bold ${analisis_riesgo.regional.nivel === 'Muy Alto' ? 'text-red-600' : 
-                                        analisis_riesgo.regional.nivel === 'Alto' ? 'text-orange-600' : 
-                                        analisis_riesgo.regional.nivel === 'Medio' ? 'text-yellow-600' : 'text-green-600'}`}>
+                                    <p className={`font-bold ${analisis_riesgo.regional.nivel === 'Muy Alto' ? 'text-red-600' :
+                                        analisis_riesgo.regional.nivel === 'Alto' ? 'text-orange-600' :
+                                            analisis_riesgo.regional.nivel === 'Medio' ? 'text-yellow-600' : 'text-green-600'}`}>
                                         {analisis_riesgo.regional.nivel}
                                     </p>
                                 </div>

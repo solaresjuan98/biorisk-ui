@@ -50,7 +50,7 @@ export const analyzeCui = async ({
     foto,
 }: AnalyzeCuiBody) => {
     try {
-        console.log(foto);
+        // console.log(foto);
         
         const { data } = await api.post<PredictionResponse>(
             "analyze_cui?explain=true",
@@ -68,6 +68,8 @@ export const analyzeCui = async ({
             },
             { headers: { "Content-Type": "application/json" } }
         );
+        console.log(data);
+        
         return data;
 
     } catch (error) {

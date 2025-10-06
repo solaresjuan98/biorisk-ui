@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Brain, GraduationCap, DollarSign, Eye, Target, Shield, User, ChevronUp } from 'lucide-react';
+import { Brain, GraduationCap, DollarSign, Eye, Target, Shield, User, ChevronUp, AlertTriangle } from 'lucide-react';
 import type { AIInsight, PredictionResponse } from '@/interfaces';
 import { getMediapipePoints } from '@/utils/getMediapipe';
 import { Skeleton } from '@/components';
@@ -20,9 +20,9 @@ const BioRiskAI = () => {
     const [municipio, setMunicipio] = useState('');
 
     // *** NUEVOS ESTADOS FALTANTES ***
-    const [region, setRegion] = useState('');
+    // const [region, setRegion] = useState('');
     // console.log(region);
-    
+
     const [edad, setEdad] = useState(0);
     const [sectorEconomico, setSectorEconomico] = useState('');
     const [profesion, setProfesion] = useState('');
@@ -92,10 +92,10 @@ const BioRiskAI = () => {
 
         // Usar passive listener para mejor performance en móviles
         window.addEventListener('scroll', handleScroll, { passive: true });
-        
+
         // Llamar inmediatamente para establecer estado inicial
         handleScroll();
-        
+
         return () => window.removeEventListener('scroll', handleScroll);
     }, []);
 
@@ -118,20 +118,20 @@ const BioRiskAI = () => {
     const scrollToElement = (elementRef: React.RefObject<HTMLDivElement | null>, offset: number = -20) => {
         if (elementRef.current) {
             const element = elementRef.current;
-            
+
             // Obtener la posición del elemento de manera más precisa
             const rect = element.getBoundingClientRect();
             const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
-            
+
             // Calcular posición absoluta del elemento
             const elementPosition = rect.top + scrollTop;
-            
+
             // Ajustar offset según el tamaño de pantalla
             const isMobile = window.innerWidth <= 768;
             const adjustedOffset = isMobile ? -80 : offset; // Más espacio en móviles
-            
+
             const finalPosition = Math.max(0, elementPosition + adjustedOffset);
-            
+
             window.scrollTo({
                 top: finalPosition,
                 behavior: 'smooth'
@@ -143,7 +143,7 @@ const BioRiskAI = () => {
     const handleNuevaConsulta = () => {
         // Reiniciar estados del formulario
         setCui('');
-        setRegion('');
+        // setRegion('');
         setEdad(0);
         setSectorEconomico('');
         setProfesion('');
@@ -177,114 +177,268 @@ const BioRiskAI = () => {
     };
 
     // Generación de insights inteligentes con IA - ACTUALIZADA para nueva estructura
+    // const generateAIInsights = (data: PredictionResponse) => {
+    //     const insights: AIInsight[] = [];
+
+    //     // Análisis de edad y perfil con IA
+    //     const edadPersona = data.analisis_riesgo.demografico.edad;
+    //     if (edadPersona < 25) {
+    //         insights.push({
+    //             id: 1,
+    //             type: 'demographic',
+    //             category: 'IA Demográfica',
+    //             icon: <Brain className="w-4 h-4 text-blue-600" />,
+    //             priority: 'medium',
+    //             message: `Nuestro modelo de IA detectó perfil joven (${edadPersona} años). Algoritmo sugiere verificar historial crediticio emergente.`,
+    //             confidence: 87,
+    //             processing_step: 'Análisis de cohorte generacional'
+    //         });
+    //     }
+
+    //     // Análisis ocupacional con IA
+    //     if (data.datos_renap.ocupacion === 'ESTUDIANTE') {
+    //         insights.push({
+    //             id: 2,
+    //             type: 'occupation',
+    //             category: 'IA Ocupacional',
+    //             icon: <GraduationCap className="w-4 h-4 text-amber-600" />,
+    //             priority: 'high',
+    //             message: 'Red neuronal identifica patrón estudiantil. Ingresos variables detectados por algoritmo predictivo.',
+    //             confidence: 93,
+    //             processing_step: 'Clasificación ocupacional automática'
+    //         });
+    //     }
+
+    //     // Análisis de riesgo regional con IA
+    //     if (data.analisis_riesgo.regional.nivel === 'Muy Alto') {
+    //         insights.push({
+    //             id: 3,
+    //             type: 'regional',
+    //             category: 'IA Regional',
+    //             icon: <DollarSign className="w-4 h-4 text-red-600" />,
+    //             priority: 'high',
+    //             message: 'Sistema experto detecta alto riesgo regional. Recomendación automática: evaluación manual.',
+    //             confidence: 91,
+    //             processing_step: 'Análisis de riesgo geográfico'
+    //         });
+    //     }
+
+    //     // Análisis de confianza del modelo con IA
+    //     if (data.prediccion.nivel_confianza === 'Bajo') {
+    //         insights.push({
+    //         id: 4,
+    //         type: 'prediction',
+    //         category: 'Análisis Predicción',
+    //         icon: <Eye className="w-4 h-4 text-amber-600" />,
+    //         priority: 'medium',
+    //         message: 'El sistema detecta baja confianza en la predicción. Se recomienda revisión manual adicional.',
+    //         confidence: 88,
+    //         processing_step: 'Análisis de confianza del modelo'
+    //         });
+    //     }
+
+    //     // Análisis del factor más influyente con IA
+    //     const topFeature = data.explicacion.contribuciones_top
+    //         .sort((a, b) => Math.abs(b.contribucion) - Math.abs(a.contribucion))[0];
+
+    //     if (topFeature && Math.abs(topFeature.contribucion) > 0.06) {
+    //         insights.push({
+    //             id: 5,
+    //             type: 'prediction',
+    //             category: 'IA Predictiva',
+    //             icon: <Target className="w-4 h-4 text-purple-600" />,
+    //             priority: 'high',
+    //             message: `Motor de IA identifica "${topFeature.feature}" como factor crítico con ${(Math.abs(topFeature.contribucion) * 100).toFixed(1)}% de influencia predictiva.`,
+    //             confidence: 92,
+    //             processing_step: 'Análisis de importancia de características'
+    //         });
+    //     }
+
+    //     // Análisis biométrico
+    //     if (data.analisis_riesgo.imagen.disponible) {
+    //         insights.push({
+    //             id: 6,
+    //             type: 'image',
+    //             category: 'IA Biométrica',
+    //             icon: <Shield className="w-4 h-4 text-emerald-600" />,
+    //             priority: 'medium',
+    //             message: 'Sistema biométrico procesó exitosamente todos los vectores de datos disponibles.',
+    //             confidence: 98,
+    //             processing_step: 'Análisis biométrico completo'
+    //         });
+    //     }
+
+    //     // Insight de validación biométrica simulada
+    //     insights.push({
+    //         id: 8,
+    //         type: 'image',
+    //         category: 'IA Biométrica',
+    //         icon: <User className="w-4 h-4 text-blue-600" />,
+    //         priority: 'low',
+    //         message: 'Algoritmo de reconocimiento facial validó coherencia fotográfica con parámetros estándar.',
+    //         confidence: 85,
+    //         processing_step: 'Validación biométrica'
+    //     });
+
+    //     return insights.sort((a, b) => {
+    //         const priorityOrder = { high: 3, medium: 2, low: 1 };
+    //         return priorityOrder[b.priority] - priorityOrder[a.priority];
+    //     });
+    // };
     const generateAIInsights = (data: PredictionResponse) => {
-        const insights: AIInsight[] = [];
+    const insights: AIInsight[] = [];
 
-        // Análisis de edad y perfil con IA
-        const edadPersona = data.analisis_riesgo.demografico.edad;
-        if (edadPersona < 25) {
-            insights.push({
-                id: 1,
-                type: 'demographic',
-                category: 'IA Demográfica',
-                icon: <Brain className="w-4 h-4 text-blue-600" />,
-                priority: 'medium',
-                message: `Nuestro modelo de IA detectó perfil joven (${edadPersona} años). Algoritmo sugiere verificar historial crediticio emergente.`,
-                confidence: 87,
-                processing_step: 'Análisis de cohorte generacional'
-            });
-        }
+    // Análisis de features faciales con IA
+    const facialFeatures = data.analisis_features.filter(f => f.categoria_feature === 'Facial');
+    const topFacialFeature = facialFeatures[0]; // Ya viene ordenado por ranking
 
-        // Análisis ocupacional con IA
-        if (data.datos_renap.ocupacion === 'ESTUDIANTE') {
-            insights.push({
-                id: 2,
-                type: 'occupation',
-                category: 'IA Ocupacional',
-                icon: <GraduationCap className="w-4 h-4 text-amber-600" />,
-                priority: 'high',
-                message: 'Red neuronal identifica patrón estudiantil. Ingresos variables detectados por algoritmo predictivo.',
-                confidence: 93,
-                processing_step: 'Clasificación ocupacional automática'
-            });
-        }
-
-        // Análisis de riesgo regional con IA
-        if (data.analisis_riesgo.regional.nivel === 'Muy Alto') {
-            insights.push({
-                id: 3,
-                type: 'regional',
-                category: 'IA Regional',
-                icon: <DollarSign className="w-4 h-4 text-red-600" />,
-                priority: 'high',
-                message: 'Sistema experto detecta alto riesgo regional. Recomendación automática: evaluación manual.',
-                confidence: 91,
-                processing_step: 'Análisis de riesgo geográfico'
-            });
-        }
-
-        // Análisis de confianza del modelo con IA
-        if (data.prediccion.nivel_confianza === 'Bajo') {
-            insights.push({
-                id: 4,
-                type: 'prediction',
-                category: 'IA Meta-Análisis',
-                icon: <Eye className="w-4 h-4 text-amber-600" />,
-                priority: 'medium',
-                message: 'Meta-algoritmo detecta baja confianza. IA recomienda activar validación humana adicional.',
-                confidence: 88,
-                processing_step: 'Análisis de confianza del modelo'
-            });
-        }
-
-        // Análisis del factor más influyente con IA
-        const topFeature = data.explicacion.contribuciones_top
-            .sort((a, b) => Math.abs(b.contribucion) - Math.abs(a.contribucion))[0];
-
-        if (topFeature && Math.abs(topFeature.contribucion) > 0.06) {
-            insights.push({
-                id: 5,
-                type: 'prediction',
-                category: 'IA Predictiva',
-                icon: <Target className="w-4 h-4 text-purple-600" />,
-                priority: 'high',
-                message: `Motor de IA identifica "${topFeature.feature}" como factor crítico con ${(Math.abs(topFeature.contribucion) * 100).toFixed(1)}% de influencia predictiva.`,
-                confidence: 92,
-                processing_step: 'Análisis de importancia de características'
-            });
-        }
-
-        // Análisis biométrico
-        if (data.analisis_riesgo.imagen.disponible) {
-            insights.push({
-                id: 6,
-                type: 'image',
-                category: 'IA Biométrica',
-                icon: <Shield className="w-4 h-4 text-emerald-600" />,
-                priority: 'medium',
-                message: 'Sistema biométrico procesó exitosamente todos los vectores de datos disponibles.',
-                confidence: 98,
-                processing_step: 'Análisis biométrico completo'
-            });
-        }
-
-        // Insight de validación biométrica simulada
+    if (topFacialFeature && topFacialFeature.importance > 30) {
         insights.push({
-            id: 8,
+            id: 1,
             type: 'image',
             category: 'IA Biométrica',
-            icon: <User className="w-4 h-4 text-blue-600" />,
-            priority: 'low',
-            message: 'Algoritmo de reconocimiento facial validó coherencia fotográfica con parámetros estándar.',
-            confidence: 85,
-            processing_step: 'Validación biométrica'
+            icon: <Brain className="w-4 h-4 text-blue-600" />,
+            priority: 'high',
+            message: `Motor de visión computacional identifica "${topFacialFeature.feature}" como factor crítico con ${topFacialFeature.importance.toFixed(1)}% de importancia global.`,
+            confidence: 94,
+            processing_step: 'Análisis facial avanzado'
         });
+    }
 
-        return insights.sort((a, b) => {
-            const priorityOrder = { high: 3, medium: 2, low: 1 };
-            return priorityOrder[b.priority] - priorityOrder[a.priority];
+    // Análisis de calidad de imagen
+    const imageQualityFeatures = ['brightness', 'contrast', 'sharpness', 'resolution_quality'];
+    const qualityIssues = facialFeatures.filter(f => 
+        imageQualityFeatures.includes(f.feature) && f.importance > 5
+    );
+
+    if (qualityIssues.length > 0) {
+        const totalQualityImportance = qualityIssues.reduce((sum, f) => sum + f.importance, 0);
+        insights.push({
+            id: 2,
+            type: 'image',
+            category: 'IA de Calidad',
+            icon: <Eye className="w-4 h-4 text-purple-600" />,
+            priority: 'medium',
+            message: `Algoritmo de calidad de imagen detectó ${qualityIssues.length} parámetros relevantes (${totalQualityImportance.toFixed(1)}% impacto combinado).`,
+            confidence: 89,
+            processing_step: 'Evaluación de calidad fotográfica'
         });
-    };
+    }
+
+    // Análisis de simetría facial
+    const symmetryFeature = facialFeatures.find(f => f.feature === 'face_symmetry');
+    if (symmetryFeature && symmetryFeature.importance > 2) {
+        insights.push({
+            id: 3,
+            type: 'image',
+            category: 'IA Biométrica',
+            icon: <Shield className="w-4 h-4 text-emerald-600" />,
+            priority: 'low',
+            message: `Red neuronal procesó simetría facial con ${symmetryFeature.importance.toFixed(2)}% de peso en modelo predictivo.`,
+            confidence: 91,
+            processing_step: 'Análisis de simetría biométrica'
+        });
+    }
+
+    // Análisis demográfico con IA
+    const demographicFeatures = data.analisis_features.filter(f => f.categoria_feature === 'Demográfico');
+    const riesgoRegional = demographicFeatures.find(f => f.feature === 'Riesgo_Regional');
+    
+    if (riesgoRegional && riesgoRegional.analisis_persona > 25) {
+        insights.push({
+            id: 4,
+            type: 'regional',
+            category: 'IA Regional',
+            icon: <DollarSign className="w-4 h-4 text-red-600" />,
+            priority: 'high',
+            message: `Sistema experto detecta alto impacto regional (${riesgoRegional.analisis_persona.toFixed(1)}% en perfil individual). Recomendación: evaluación contextual.`,
+            confidence: 93,
+            processing_step: 'Análisis de riesgo geográfico'
+        });
+    }
+
+    // Análisis de edad con IA
+    const edadFeature = demographicFeatures.find(f => f.feature === 'Edad_Real');
+    const edadPersona = data.analisis_riesgo.demografico.edad;
+    
+    if (edadFeature && edadFeature.analisis_persona > 20) {
+        insights.push({
+            id: 5,
+            type: 'demographic',
+            category: 'IA Demográfica',
+            icon: <GraduationCap className="w-4 h-4 text-amber-600" />,
+            priority: edadPersona < 25 ? 'high' : 'medium',
+            message: `Modelo detecta edad (${edadPersona} años) con ${edadFeature.analisis_persona.toFixed(1)}% de influencia en predicción individual.`,
+            confidence: 88,
+            processing_step: 'Análisis de cohorte generacional'
+        });
+    }
+
+    // Análisis ocupacional con IA
+    if (data.datos_renap.ocupacion === 'ESTUDIANTE') {
+        insights.push({
+            id: 6,
+            type: 'occupation',
+            category: 'IA Ocupacional',
+            icon: <User className="w-4 h-4 text-blue-600" />,
+            priority: 'medium',
+            message: 'Clasificador automático identifica patrón estudiantil. Algoritmo ajusta expectativas de estabilidad de ingresos.',
+            confidence: 90,
+            processing_step: 'Clasificación ocupacional'
+        });
+    }
+
+    // Análisis del feature más influyente general
+    const topFeature = data.analisis_features[0]; // Ya viene ordenado por ranking
+    if (topFeature && topFeature.importance > 15) {
+        insights.push({
+            id: 7,
+            type: 'prediction',
+            category: 'IA Predictiva',
+            icon: <Target className="w-4 h-4 text-indigo-600" />,
+            priority: 'high',
+            message: `Motor predictivo prioriza "${topFeature.feature}" (ranking #${topFeature.ranking}) con ${topFeature.importance.toFixed(1)}% de importancia global.`,
+            confidence: 96,
+            processing_step: 'Ranking de características'
+        });
+    }
+
+    // Análisis de confianza del modelo
+    if (data.prediccion.nivel_confianza === 'Bajo') {
+        insights.push({
+            id: 8,
+            type: 'prediction',
+            category: 'Análisis Predicción',
+            icon: <AlertTriangle className="w-4 h-4 text-orange-600" />,
+            priority: 'high',
+            message: 'El sistema detecta baja confianza en la predicción. Requiere validación manual por analista experimentado.',
+            confidence: 85,
+            processing_step: 'Evaluación de confianza'
+        });
+    }
+
+    // Análisis combinado facial vs demográfico
+    const totalFacialImportance = facialFeatures.reduce((sum, f) => sum + f.importance, 0);
+    const totalDemographicImportance = demographicFeatures.reduce((sum, f) => sum + f.importance, 0);
+    
+    if (totalFacialImportance > totalDemographicImportance * 3) {
+        insights.push({
+            id: 9,
+            type: 'image',
+            category: 'IA Comparativa',
+            icon: <Brain className="w-4 h-4 text-violet-600" />,
+            priority: 'medium',
+            message: `Análisis biométrico domina predicción (${totalFacialImportance.toFixed(1)}% facial vs ${totalDemographicImportance.toFixed(1)}% demográfico).`,
+            confidence: 92,
+            processing_step: 'Análisis de balance de features'
+        });
+    }
+
+    return insights.sort((a, b) => {
+        const priorityOrder = { high: 3, medium: 2, low: 1 };
+        return priorityOrder[b.priority] - priorityOrder[a.priority];
+    });
+};
 
     // *** EFECTO ADICIONAL PARA ASEGURAR SCROLL EN MÓVILES ***
     useEffect(() => {
@@ -302,7 +456,7 @@ const BioRiskAI = () => {
             // Delay más largo para móviles para asegurar renderizado completo
             const isMobile = window.innerWidth <= 768;
             const delay = isMobile ? 300 : 100;
-            
+
             setTimeout(() => {
                 scrollToElement(processingRef, -50);
             }, delay);
@@ -333,7 +487,7 @@ const BioRiskAI = () => {
     }, [loading, currentStepIndex, processingSteps]);
 
     const handleBuscar = async () => {
-        
+
         // Validación de campos obligatorios
         if (!cui.trim() || edad <= 0 || !sectorEconomico.trim() ||
             !profesion.trim() || !estadoCivil || dependientes < 0) {
@@ -361,8 +515,8 @@ const BioRiskAI = () => {
         setTimeout(async () => {
             try {
                 const image_base64 = photoDataUrl;
-                
-                
+
+
                 const datosDemo = await analyzeCui({
                     cui,
                     departamento,
@@ -375,8 +529,8 @@ const BioRiskAI = () => {
                     foto: ''//,image_base64 || ''
                 });
 
-                console.log(datosDemo);
-                
+                console.log('Respuesta completa:', datosDemo);
+
 
                 if (image_base64) {
                     const foto = await getMediapipePoints(image_base64 || "");
@@ -462,7 +616,7 @@ const BioRiskAI = () => {
                     setPhotoDataUrl={setPhotoDataUrl}
                     handleBuscar={handleBuscar}
                     handleNuevaConsulta={handleNuevaConsulta}
-                    hasResults={hasResults} 
+                    hasResults={hasResults}
                     loading={loading}
                     aiProcessingSteps={aiProcessingSteps}
                     processingStep={processingStep}
@@ -479,9 +633,10 @@ const BioRiskAI = () => {
                     facingMode={facingMode}
                     toggleCamera={toggleCamera}
                     hasMultipleCameras={hasMultipleCameras}
-                    processingRef={processingRef} 
-                    departamento={departamento} municipio={municipio}               
-                    />
+                    processingRef={processingRef}
+                    departamento={departamento}
+                    municipio={municipio}
+                />
 
                 {/* SKELETON AQUÍ */}
                 <div>

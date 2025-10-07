@@ -1,6 +1,6 @@
 import { API_THRESHOLD } from '@/config';
 import type { AIInsight, AnalisisFeature, AnalisisRiesgo, DatosRenap, Explicacion, Prediccion } from '@/interfaces';
-import { AlertCircle, BarChart3, Bot, Brain, Briefcase, Calendar, CheckCircle, Clock, Cpu, DollarSign, Eye, MapPin, Sparkles, Target, TrendingUp, User, Users, XCircle, Zap } from 'lucide-react';
+import { AlertCircle, AlertTriangle, BarChart3, Bot, Brain, Briefcase, Calendar, CheckCircle, Clock, Cpu, DollarSign, Eye, MapPin, Sparkles, Target, TrendingUp, User, Users, XCircle, Zap } from 'lucide-react';
 import React from 'react';
 
 // Props del componente
@@ -89,6 +89,19 @@ export const Result: React.FC<ResultProps> = ({
     const hasAnyPhoto = cameraBase64Photo || datos_renap.foto;
     const isClickable = hasAnyPhoto && !hasProcessedOnce;
     const imageSource = getImageSource();
+
+    const getSemaforoColor = (categoria: string) => {
+        const categoriaUpper = categoria.toUpperCase();
+        if (categoriaUpper === "BAJO" || categoriaUpper === "MUY BAJO") {
+            return "green";
+        } else if (categoriaUpper === "MEDIO" || categoriaUpper === "MODERADO") {
+            return "yellow";
+        } else {
+            return "red";
+        }
+    };
+
+    const colorActivo = getSemaforoColor(prediccion.categoria_riesgo);
 
     return (
         <div className="space-y-6">
@@ -348,14 +361,70 @@ export const Result: React.FC<ResultProps> = ({
                                             {(API_THRESHOLD * 100).toFixed(1)}%
                                         </p>
                                     </div>
-                                    <div>
-                                        <p className="text-sm opacity-80 mb-1 flex items-center justify-center gap-1">
-                                            <TrendingUp className="w-4 h-4" />
-                                            Categoría Riesgo
-                                        </p>
-                                        <p className="text-lg font-bold text-purple-600">
-                                            {prediccion.categoria_riesgo}
-                                        </p>
+                                    <div className='relative lg:-mt-6'>
+                                        <div className={`rounded-lg p-4 border-2 shadow-md ${colorActivo === 'green'
+                                            ? 'bg-gradient-to-br from-green-50 to-green-100 border-green-300'
+                                            : colorActivo === 'yellow'
+                                                ? 'bg-gradient-to-br from-yellow-50 to-yellow-100 border-yellow-300'
+                                                : 'bg-gradient-to-br from-red-50 to-red-100 border-red-300'
+                                            }`}>
+                                            <p className={`text-sm font-semibold mb-2 flex items-center justify-center gap-1 ${colorActivo === 'green'
+                                                ? 'text-green-800'
+                                                : colorActivo === 'yellow'
+                                                    ? 'text-yellow-800'
+                                                    : 'text-red-800'
+                                                }`}>
+                                                <AlertTriangle className="w-4 h-4" />
+                                                Categoría de Riesgo
+                                            </p>
+                                            <p className={`text-2xl font-black mb-3 ${colorActivo === 'green'
+                                                ? 'text-green-700'
+                                                : colorActivo === 'yellow'
+                                                    ? 'text-yellow-700'
+                                                    : 'text-red-700'
+                                                }`}>
+                                                {prediccion.categoria_riesgo}
+                                            </p>
+
+                                            {/* SEMÁFORO */}
+                                            <div className="flex justify-center items-center gap-2 bg-slate-900 rounded-full p-2 shadow-inner">
+                                                {/* Luz Verde */}
+                                                <div
+                                                    className={`w-6 h-6 rounded-full border-2 transition-all duration-300 cursor-pointer ${colorActivo === 'green'
+                                                        ? 'bg-green-400 border-green-300 shadow-[0_0_15px_rgba(34,197,94,0.8),0_0_25px_rgba(34,197,94,0.5)] animate-pulse hover:bg-green-300 hover:shadow-[0_0_20px_rgba(34,197,94,1),0_0_35px_rgba(34,197,94,0.7)] cursor-pointer'
+                                                        : 'bg-slate-700 border-slate-800 shadow-inner'
+                                                        }`}
+                                                />
+
+                                                {/* Luz Amarilla */}
+                                                <div
+                                                    className={`w-6 h-6 rounded-full border-2 transition-all duration-300 cursor-pointer ${colorActivo === 'yellow'
+                                                        ? 'bg-yellow-300 border-yellow-200 shadow-[0_0_15px_rgba(250,204,21,0.8),0_0_25px_rgba(250,204,21,0.5)] animate-pulse hover:bg-yellow-200 hover:shadow-[0_0_20px_rgba(250,204,21,1),0_0_35px_rgba(250,204,21,0.7)] cursor-pointer'
+                                                        : 'bg-slate-700 border-slate-800 shadow-inner'
+                                                        }`}
+                                                />
+
+                                                {/* Luz Roja */}
+                                                <div
+                                                    className={`w-6 h-6 rounded-full border-2 transition-all duration-300 ${colorActivo === 'red'
+                                                        ? 'bg-red-400 border-red-300 shadow-[0_0_15px_rgba(239,68,68,0.8),0_0_25px_rgba(239,68,68,0.5)] animate-pulse hover:bg-red-300 hover:shadow-[0_0_20px_rgba(239,68,68,1),0_0_35px_rgba(239,68,68,0.7)] cursor-pointer'
+                                                        : 'bg-slate-700 border-slate-800 shadow-inner'
+                                                        }`}
+                                                />
+                                            </div>
+
+                                            {/* Texto descriptivo del nivel */}
+                                            <p className={`text-xs mt-2 font-medium ${colorActivo === 'green'
+                                                ? 'text-green-600'
+                                                : colorActivo === 'yellow'
+                                                    ? 'text-yellow-600'
+                                                    : 'text-red-600'
+                                                }`}>
+                                                {colorActivo === 'green' && '✓ Riesgo Controlado'}
+                                                {colorActivo === 'yellow' && '⚠ Precaución Requerida'}
+                                                {colorActivo === 'red' && '✕ Alto Riesgo'}
+                                            </p>
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -565,7 +634,7 @@ export const Result: React.FC<ResultProps> = ({
                                                         ) : (
                                                             <Eye className="w-3 h-3" />
                                                         )}
-                                                        {impactLevel === 'high' ? 'Alta' : impactLevel === 'medium' ? 'Media' : 'Baja'} Prioridad
+                                                        {impactLevel === 'high' ? 'Alta'    : impactLevel === 'medium' ? 'Media' : 'Baja'} Prioridad
                                                     </span>
                                                 </div>
                                                 <p className="text-sm font-semibold mb-3 capitalize">
@@ -717,13 +786,13 @@ export const Result: React.FC<ResultProps> = ({
                                 </span>
                             </div>
 
-                            <div className="flex justify-between text-gray-900">
+                            {/* <div className="flex justify-between text-gray-900">
                                 <span className="text-gray-600 flex items-center gap-1">
                                     <TrendingUp className="w-3 h-3" />
                                     Versión:
                                 </span>
                                 <span className="font-medium">{version}</span>
-                            </div>
+                            </div> */}
                             <div className="pt-3 border-t border-gray-200">
                                 <p className="text-xs text-gray-600 flex items-center gap-1">
                                     <Brain className="w-3 h-3" />
@@ -815,7 +884,7 @@ export const Result: React.FC<ResultProps> = ({
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Nivel de Riesgo:</span>
-                                    <p className={`font-bold ${analisis_riesgo.ocupacion.nivel_riesgo === 'Alto' ? 'text-red-600' :
+                                    <p className={`font-bold ${analisis_riesgo.ocupacion.nivel_riesgo === 'Muy_Alto' ? 'text-red-600' :
                                         analisis_riesgo.ocupacion.nivel_riesgo === 'Medio' ? 'text-yellow-600' : 'text-green-600'}`}>
                                         {analisis_riesgo.ocupacion.nivel_riesgo}
                                     </p>
@@ -825,7 +894,10 @@ export const Result: React.FC<ResultProps> = ({
                                         <span className="text-xs text-gray-600">Score:</span>
                                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                                             <div
-                                                className="bg-blue-500 h-2 rounded-full"
+                                                // className="bg-blue-500 h-2 rounded-full"
+                                                className={`h-2 rounded-full ${analisis_riesgo.ocupacion.nivel_riesgo === 'Muy_Alto' ? 'bg-red-500' :
+                                                    analisis_riesgo.ocupacion.nivel_riesgo === 'Medio' ? 'bg-yellow-500' : 'bg-emerald-500'
+                                                    }`}
                                                 style={{ width: `${(analisis_riesgo.ocupacion.score_riesgo / 5) * 100}%` }}
                                             />
                                         </div>

@@ -1,5 +1,13 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import api from "@/api/axios";
 import type { PredictionResponse } from "@/interfaces";
+
+
+export interface AnalyzeCuiResponse {
+    success: boolean;
+    data?: PredictionResponse;
+    error?: string;
+}
 
 interface PredictionBody {
     dpi: string;
@@ -50,9 +58,8 @@ export const analyzeCui = async ({
     foto,
 }: AnalyzeCuiBody) => {
     try {
-        // console.log(foto);
         
-        const { data } = await api.post<PredictionResponse>(
+        const { data } = await api.post<AnalyzeCuiResponse>(
             "analyze_cui?explain=true",
             {
                 cui,
@@ -68,14 +75,23 @@ export const analyzeCui = async ({
             },
             { headers: { "Content-Type": "application/json" } }
         );
+        
+        // return data;
         console.log(data);
         
-        return data;
+        return { 
+            success: true,
+            data
+        }
 
     } catch (error) {
         console.error("Error analyzing CUI:", error);
+        const detail = (error as any)?.response?.data?.detail || 'Unknown error';
+        // console.log(detail);
+        
         return {
-
-        } as PredictionResponse;
+            success: false,
+            error: detail
+        };
     }
 }

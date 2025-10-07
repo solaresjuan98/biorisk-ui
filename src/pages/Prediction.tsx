@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from 'react';
-import { Brain, GraduationCap, DollarSign, Eye, Target, Shield, User, ChevronUp, AlertTriangle, Briefcase, MapPin } from 'lucide-react';
+import { Eye, Target, User, ChevronUp, AlertTriangle, Briefcase, MapPin } from 'lucide-react';
 import type { AIInsight, PredictionResponse } from '@/interfaces';
 import { getMediapipePoints } from '@/utils/getMediapipe';
 import { Skeleton } from '@/components';
@@ -702,6 +702,7 @@ const BioRiskAI = () => {
         setSmartInsights([]);
         setAiProcessingSteps([]);
         setCurrentStepIndex(0);
+        setResultados(null);
 
         // Simular procesamiento completo
         setTimeout(async () => {
@@ -709,7 +710,7 @@ const BioRiskAI = () => {
                 const image_base64 = photoDataUrl;
 
 
-                const datosDemo = await analyzeCui({
+                const response = await analyzeCui({
                     cui,
                     departamento,
                     municipio,
@@ -721,14 +722,32 @@ const BioRiskAI = () => {
                     foto: ''//,image_base64 || ''
                 });
 
-                console.log('Respuesta completa:', datosDemo);
+                // console.log('Respuesta completa:', datosDemo);
+                if (!response.success) {
+                    setLoading(false);
+                    setProcessingStep('');
+                    console.log(response);
+                    
+                    Swal.fire({
+                        icon: 'error',
+                        title: 'Error en el análisis',
+                        text: response.error.message || 'Ocurrió un error al procesar la solicitud',
+                        confirmButtonText: 'Ok',
+                        customClass: {
+                            popup: 'swal2-popup-custom'
+                        }
+                    });
+                    return;
+                }
 
+                const datosDemo = response.data as unknown as PredictionResponse;
 
                 if (image_base64) {
                     const foto = await getMediapipePoints(image_base64 || "");
                     setCameraBase64Photo(foto.processed_image_base64 || "");
                 }
-
+                console.log(datosDemo);
+                
                 if (datosDemo && Object.keys(datosDemo).length > 0) {
                     setResultados(datosDemo);
                     const insights = generateAIInsights(datosDemo);
@@ -755,6 +774,7 @@ const BioRiskAI = () => {
                 }
 
             } catch (error) {
+                
                 console.error('Error en el análisis:', error);
                 alert('Error al procesar el análisis. Por favor intenta nuevamente.');
             } finally {

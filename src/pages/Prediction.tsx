@@ -1,5 +1,6 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useState, useEffect, useRef } from 'react';
-import { Brain, GraduationCap, DollarSign, Eye, Target, Shield, User, ChevronUp, AlertTriangle } from 'lucide-react';
+import { Brain, GraduationCap, DollarSign, Eye, Target, Shield, User, ChevronUp, AlertTriangle, Briefcase, MapPin } from 'lucide-react';
 import type { AIInsight, PredictionResponse } from '@/interfaces';
 import { getMediapipePoints } from '@/utils/getMediapipe';
 import { Skeleton } from '@/components';
@@ -286,159 +287,350 @@ const BioRiskAI = () => {
     //     });
     // };
     const generateAIInsights = (data: PredictionResponse) => {
-    const insights: AIInsight[] = [];
+        const insights: AIInsight[] = [];
 
-    // Análisis de features faciales con IA
-    const facialFeatures = data.analisis_features.filter(f => f.categoria_feature === 'Facial');
-    const topFacialFeature = facialFeatures[0]; // Ya viene ordenado por ranking
+        // Filtrar y ordenar features igual que en "Factores Clave de IA"
+        const topFeatures = data.analisis_features
+            .filter(feature => feature.analisis_persona !== 0)
+            .sort((a, b) => b.analisis_persona - a.analisis_persona)
+            .slice(0, 6);
 
-    if (topFacialFeature && topFacialFeature.importance > 30) {
-        insights.push({
-            id: 1,
-            type: 'image',
-            category: 'IA Biométrica',
-            icon: <Brain className="w-4 h-4 text-blue-600" />,
-            priority: 'high',
-            message: `Motor de visión computacional identifica "${topFacialFeature.feature}" como factor crítico con ${topFacialFeature.importance.toFixed(1)}% de importancia global.`,
-            confidence: 94,
-            processing_step: 'Análisis facial avanzado'
+        // Función auxiliar para generar mensajes interpretativos
+        const generateMessage = (feature: any, data: PredictionResponse): string => {
+            const featureName = feature.feature.toLowerCase();
+            const impact = feature.analisis_persona.toFixed(1);
+
+            // === FEATURES FACIALES ===
+            if (featureName === 'skin_health_score') {
+                return `Score facial en variable "salud de piel" detectó ${impact}% de peso. Algoritmo analiza textura, uniformidad y condición dérmica como indicador biométrico.`;
+            }
+
+            if (featureName === 'brightness') {
+                return `Score facial en variable "brillo" detectó ${impact}% de peso. El modelo evalúa condiciones de iluminación óptimas para extracción confiable de características.`;
+            }
+
+            if (featureName === 'contrast') {
+                return `Score facial en variable "contraste" detectó ${impact}% de peso. Sistema mide diferenciación tonal entre rasgos faciales para precisión biométrica.`;
+            }
+
+            if (featureName === 'sharpness') {
+                return `Score facial en variable "nitidez" detectó ${impact}% de peso. Algoritmo cuantifica definición de bordes y detalles para análisis de calidad de imagen.`;
+            }
+
+            if (featureName === 'resolution_quality') {
+                return `Score facial en variable "calidad de resolución" detectó ${impact}% de peso. Sistema evalúa densidad de píxeles suficiente para reconocimiento facial confiable.`;
+            }
+
+            if (featureName === 'face_symmetry') {
+                return `Score facial en variable "simetría facial" detectó ${impact}% de peso. Red neuronal mide equilibrio bilateral de rasgos en puntos de referencia anatómicos.`;
+            }
+
+            // === FEATURES DE RIESGO REGIONAL/SUCURSAL ===
+            if (featureName === 'riesgo_regional' || featureName.includes('regional')) {
+                const region = `${data.datos_renap.municipio}, ${data.datos_renap.departamento}`;
+                const nivelRiesgo = data.analisis_riesgo.regional.nivel;
+
+                if (nivelRiesgo === 'Muy Alto') {
+                    return `Región "${region}" clasificada como zona de muy alto riesgo. Contribuye ${impact}% por indicadores macroeconómicos adversos y morosidad histórica elevada.`;
+                } else if (nivelRiesgo === 'Alto') {
+                    return `Región "${region}" identificada como zona de alto riesgo. Factor aporta ${impact}% basado en volatilidad económica y comportamiento de cartera regional.`;
+                } else if (nivelRiesgo === 'Medio') {
+                    return `Región "${region}" con nivel de riesgo moderado. Variable contribuye ${impact}% según estabilidad económica relativa del área geográfica.`;
+                } else {
+                    return `Región "${region}" clasificada como zona de bajo riesgo. Factor representa ${impact}% por indicadores económicos favorables en el área.`;
+                }
+            }
+
+            if (featureName === 'riesgo_sucursal' || featureName.includes('sucursal')) {
+                const region = `${data.datos_renap.municipio}, ${data.datos_renap.departamento}`;
+                const nivelRiesgo = data.analisis_riesgo.regional.nivel;
+
+                if (nivelRiesgo === 'Muy Alto' || nivelRiesgo === 'Alto') {
+                    return `Sucursal ubicada en zona de alto riesgo (${region}). El algoritmo asigna ${impact}% de peso crítico por concentración de cartera vencida en el área de influencia.`;
+                } else if (nivelRiesgo === 'Medio') {
+                    return `Sucursal en zona de riesgo moderado (${region}). Factor contribuye ${impact}% basándose en desempeño histórico de la cartera local.`;
+                } else {
+                    return `Sucursal ubicada en zona de bajo riesgo (${region}). Variable aporta ${impact}% reflejando estabilidad crediticia del área geográfica.`;
+                }
+            }
+
+            // === FEATURES OCUPACIONALES ===
+            if (featureName === 'riesgo_ocupacional' || featureName.includes('ocupacion')) {
+                const profesion = data.analisis_riesgo.ocupacion.profesion_declarada;
+                const nivelRiesgo = data.analisis_riesgo.ocupacion.nivel_riesgo;
+
+                if (profesion.toLowerCase().includes('estudiante')) {
+                    return `Perfil ocupacional "Estudiante" detectado. Representa ${impact}% del análisis por variabilidad de ingresos y dependencia de fuentes externas de financiamiento.`;
+                } else if (nivelRiesgo === 'Alto') {
+                    return `Ocupación "${profesion}" categorizada como alto riesgo laboral. Contribuye ${impact}% debido a inestabilidad sectorial o informalidad en el empleo.`;
+                } else if (nivelRiesgo === 'Medio') {
+                    return `Profesión "${profesion}" con riesgo ocupacional moderado. Variable aporta ${impact}% por estabilidad laboral intermedia en el sector.`;
+                } else {
+                    return `Ocupación "${profesion}" clasificada como bajo riesgo. Factor representa ${impact}% indicando alta estabilidad y formalidad laboral.`;
+                }
+            }
+
+            // === FEATURES DE EDAD ===
+            if (featureName === 'edad_real' || featureName.includes('edad')) {
+                const edad = data.analisis_riesgo.demografico.edad;
+
+                if (edad < 25) {
+                    return `Perfil joven detectado (${edad} años). Segmento 18-24 años contribuye ${impact}% por inestabilidad laboral y financiera.`;
+                } else if (edad >= 25 && edad < 35) {
+                    return `Perfil adulto joven (${edad} años). Segmento 25-34 años aporta ${impact}% en fase de consolidación financiera y laboral progresiva.`;
+                } else if (edad >= 35 && edad < 50) {
+                    return `Perfil adulto establecido (${edad} años). Rango 35-49 años representa ${impact}% con estabilidad económica típica y madurez crediticia.`;
+                } else if (edad >= 50 && edad < 65) {
+                    return `Perfil adulto mayor (${edad} años). Segmento 50-64 años contribuye ${impact}% con experiencia crediticia extensa y estabilidad patrimonial.`;
+                } else {
+                    return `Perfil adulto mayor (${edad} años). Grupo 65+ años aporta ${impact}% considerando capacidad de pago en etapa de retiro o prejubilación.`;
+                }
+            }
+
+            // === FEATURES DEMOGRÁFICAS GENERALES ===
+            if (feature.categoria_feature.toLowerCase() === 'demografico') {
+                if (featureName.includes('estado_civil') || featureName.includes('civil')) {
+                    const estadoCivil = data.analisis_riesgo.demografico.estado_civil;
+                    return `Estado civil "${estadoCivil}" con peso de ${impact}%. Variable socioeconómica que refleja nivel de responsabilidades familiares y estabilidad personal.`;
+                }
+
+                if (featureName.includes('dependientes')) {
+                    const deps = data.analisis_riesgo.demografico.dependientes;
+                    if (deps === 0) {
+                        return `Sin dependientes económicos registrados. Factor contribuye ${impact}% indicando menor carga financiera familiar.`;
+                    } else if (deps <= 2) {
+                        return `Carga familiar de ${deps} dependiente(s). Variable aporta ${impact}% reflejando responsabilidades económicas moderadas.`;
+                    } else {
+                        return `Carga familiar significativa de ${deps} dependientes. Factor representa ${impact}% crítico por alta presión sobre capacidad de pago.`;
+                    }
+                }
+            }
+
+            // === FALLBACK GENÉRICO ===
+            const featureDisplay = feature.feature.replace(/_/g, ' ');
+            return `Variable "${featureDisplay}" de categoría ${feature.categoria_feature} detectada con ${impact}% de influencia en el perfil crediticio individual.`;
+        };
+
+        // Generar insights
+        topFeatures.forEach((feature, index) => {
+            const impactLevel = feature.analisis_persona >= 15 ? 'high' :
+                feature.analisis_persona >= 8 ? 'medium' : 'low';
+
+            let insightType: 'demographic' | 'occupation' | 'regional' | 'image' | 'prediction' = 'prediction';
+            let categoryName = feature.categoria_feature.toUpperCase();
+            let iconComponent;
+
+            switch (feature.categoria_feature.toLowerCase()) {
+                case 'demografico':
+                    insightType = 'demographic';
+                    categoryName = 'IA Demográfica';
+                    iconComponent = <User className="w-4 h-4 text-purple-600" />;
+                    break;
+                case 'ocupacion':
+                    insightType = 'occupation';
+                    categoryName = 'IA Ocupacional';
+                    iconComponent = <Briefcase className="w-4 h-4 text-blue-600" />;
+                    break;
+                case 'regional':
+                    insightType = 'regional';
+                    categoryName = 'IA Regional';
+                    iconComponent = <MapPin className="w-4 h-4 text-red-600" />;
+                    break;
+                case 'facial':
+                    insightType = 'image';
+                    categoryName = 'IA Biométrica';
+                    iconComponent = <Eye className="w-4 h-4 text-emerald-600" />;
+                    break;
+                default:
+                    categoryName = 'IA Predictiva';
+                    iconComponent = <Target className="w-4 h-4 text-indigo-600" />;
+            }
+
+            insights.push({
+                id: index + 1,
+                type: insightType,
+                category: categoryName,
+                icon: iconComponent,
+                priority: impactLevel,
+                message: generateMessage(feature, data),
+                confidence: Math.min(95, 75 + (feature.analisis_persona * 0.8)),
+                processing_step: `Análisis ${feature.categoria_feature.toLowerCase()}`
+            });
         });
-    }
 
-    // Análisis de calidad de imagen
-    const imageQualityFeatures = ['brightness', 'contrast', 'sharpness', 'resolution_quality'];
-    const qualityIssues = facialFeatures.filter(f => 
-        imageQualityFeatures.includes(f.feature) && f.importance > 5
-    );
+        // Insight de confianza baja
+        if (data.prediccion.nivel_confianza === 'Bajo') {
+            insights.push({
+                id: insights.length + 1,
+                type: 'prediction',
+                category: 'Validación Predictiva',
+                icon: <AlertTriangle className="w-4 h-4 text-orange-600" />,
+                priority: 'high',
+                message: 'Nivel de confianza bajo detectado en predicción. Modelo sugiere revisión manual adicional por analista de riesgos para validación de resultado.',
+                confidence: 85,
+                processing_step: 'Evaluación de confianza estadística'
+            });
+        }
 
-    if (qualityIssues.length > 0) {
-        const totalQualityImportance = qualityIssues.reduce((sum, f) => sum + f.importance, 0);
-        insights.push({
-            id: 2,
-            type: 'image',
-            category: 'IA de Calidad',
-            icon: <Eye className="w-4 h-4 text-purple-600" />,
-            priority: 'medium',
-            message: `Algoritmo de calidad de imagen detectó ${qualityIssues.length} parámetros relevantes (${totalQualityImportance.toFixed(1)}% impacto combinado).`,
-            confidence: 89,
-            processing_step: 'Evaluación de calidad fotográfica'
+        return insights.sort((a, b) => {
+            const priorityOrder = { high: 3, medium: 2, low: 1 };
+            return priorityOrder[b.priority] - priorityOrder[a.priority];
         });
-    }
+    };
+    // const generateAIInsights = (data: PredictionResponse) => {
+    //     const insights: AIInsight[] = [];
 
-    // Análisis de simetría facial
-    const symmetryFeature = facialFeatures.find(f => f.feature === 'face_symmetry');
-    if (symmetryFeature && symmetryFeature.importance > 2) {
-        insights.push({
-            id: 3,
-            type: 'image',
-            category: 'IA Biométrica',
-            icon: <Shield className="w-4 h-4 text-emerald-600" />,
-            priority: 'low',
-            message: `Red neuronal procesó simetría facial con ${symmetryFeature.importance.toFixed(2)}% de peso en modelo predictivo.`,
-            confidence: 91,
-            processing_step: 'Análisis de simetría biométrica'
-        });
-    }
+    //     // Análisis de features faciales con IA
+    //     const facialFeatures = data.analisis_features.filter(f => f.categoria_feature === 'Facial');
+    //     const topFacialFeature = facialFeatures[0]; // Ya viene ordenado por ranking
 
-    // Análisis demográfico con IA
-    const demographicFeatures = data.analisis_features.filter(f => f.categoria_feature === 'Demográfico');
-    const riesgoRegional = demographicFeatures.find(f => f.feature === 'Riesgo_Regional');
-    
-    if (riesgoRegional && riesgoRegional.analisis_persona > 25) {
-        insights.push({
-            id: 4,
-            type: 'regional',
-            category: 'IA Regional',
-            icon: <DollarSign className="w-4 h-4 text-red-600" />,
-            priority: 'high',
-            message: `Sistema experto detecta alto impacto regional (${riesgoRegional.analisis_persona.toFixed(1)}% en perfil individual). Recomendación: evaluación contextual.`,
-            confidence: 93,
-            processing_step: 'Análisis de riesgo geográfico'
-        });
-    }
+    //     if (topFacialFeature && topFacialFeature.importance > 30) {
+    //         insights.push({
+    //             id: 1,
+    //             type: 'image',
+    //             category: 'IA Biométrica',
+    //             icon: <Brain className="w-4 h-4 text-blue-600" />,
+    //             priority: 'high',
+    //             message: `La IA detectó "${topFacialFeature.feature}" como patrón facial dominsante con ${topFacialFeature.analisis_persona.toFixed(1)}% de influencia predictiva.`,
+    //             confidence: 94,
+    //             processing_step: 'Análisis facial avanzado'
+    //         });
+    //     }
 
-    // Análisis de edad con IA
-    const edadFeature = demographicFeatures.find(f => f.feature === 'Edad_Real');
-    const edadPersona = data.analisis_riesgo.demografico.edad;
-    
-    if (edadFeature && edadFeature.analisis_persona > 20) {
-        insights.push({
-            id: 5,
-            type: 'demographic',
-            category: 'IA Demográfica',
-            icon: <GraduationCap className="w-4 h-4 text-amber-600" />,
-            priority: edadPersona < 25 ? 'high' : 'medium',
-            message: `Modelo detecta edad (${edadPersona} años) con ${edadFeature.analisis_persona.toFixed(1)}% de influencia en predicción individual.`,
-            confidence: 88,
-            processing_step: 'Análisis de cohorte generacional'
-        });
-    }
+    //     // Análisis de calidad de imagen
+    //     const imageQualityFeatures = ['brightness', 'contrast', 'sharpness', 'resolution_quality'];
+    //     const qualityIssues = facialFeatures.filter(f =>
+    //         imageQualityFeatures.includes(f.feature) && f.importance > 5
+    //     );
 
-    // Análisis ocupacional con IA
-    if (data.datos_renap.ocupacion === 'ESTUDIANTE') {
-        insights.push({
-            id: 6,
-            type: 'occupation',
-            category: 'IA Ocupacional',
-            icon: <User className="w-4 h-4 text-blue-600" />,
-            priority: 'medium',
-            message: 'Clasificador automático identifica patrón estudiantil. Algoritmo ajusta expectativas de estabilidad de ingresos.',
-            confidence: 90,
-            processing_step: 'Clasificación ocupacional'
-        });
-    }
+    //     if (qualityIssues.length > 0) {
+    //         const totalQualityImportance = qualityIssues.reduce((sum, f) => sum + f.importance, 0);
+    //         insights.push({
+    //             id: 2,
+    //             type: 'image',
+    //             category: 'IA de Calidad',
+    //             icon: <Eye className="w-4 h-4 text-purple-600" />,
+    //             priority: 'medium',
+    //             message: `Algoritmo de calidad de imagen detectó ${qualityIssues.length} parámetros relevantes (${totalQualityImportance.toFixed(1)}% impacto combinado).`,
+    //             confidence: 89,
+    //             processing_step: 'Evaluación de calidad fotográfica'
+    //         });
+    //     }
 
-    // Análisis del feature más influyente general
-    const topFeature = data.analisis_features[0]; // Ya viene ordenado por ranking
-    if (topFeature && topFeature.importance > 15) {
-        insights.push({
-            id: 7,
-            type: 'prediction',
-            category: 'IA Predictiva',
-            icon: <Target className="w-4 h-4 text-indigo-600" />,
-            priority: 'high',
-            message: `Motor predictivo prioriza "${topFeature.feature}" (ranking #${topFeature.ranking}) con ${topFeature.importance.toFixed(1)}% de importancia global.`,
-            confidence: 96,
-            processing_step: 'Ranking de características'
-        });
-    }
+    //     // Análisis de simetría facial
+    //     const symmetryFeature = facialFeatures.find(f => f.feature === 'face_symmetry');
+    //     if (symmetryFeature && symmetryFeature.importance > 2) {
+    //         insights.push({
+    //             id: 3,
+    //             type: 'image',
+    //             category: 'IA Biométrica',
+    //             icon: <Shield className="w-4 h-4 text-emerald-600" />,
+    //             priority: 'low',
+    //             message: `Red neuronal procesó simetría facial con ${symmetryFeature.importance.toFixed(2)}% de peso en modelo predictivo.`,
+    //             confidence: 91,
+    //             processing_step: 'Análisis de simetría biométrica'
+    //         });
+    //     }
 
-    // Análisis de confianza del modelo
-    if (data.prediccion.nivel_confianza === 'Bajo') {
-        insights.push({
-            id: 8,
-            type: 'prediction',
-            category: 'Análisis Predicción',
-            icon: <AlertTriangle className="w-4 h-4 text-orange-600" />,
-            priority: 'high',
-            message: 'El sistema detecta baja confianza en la predicción. Requiere validación manual por analista experimentado.',
-            confidence: 85,
-            processing_step: 'Evaluación de confianza'
-        });
-    }
+    //     // Análisis demográfico con IA
+    //     const demographicFeatures = data.analisis_features.filter(f => f.categoria_feature === 'Demográfico');
+    //     const riesgoRegional = demographicFeatures.find(f => f.feature === 'Riesgo_Regional');
 
-    // Análisis combinado facial vs demográfico
-    const totalFacialImportance = facialFeatures.reduce((sum, f) => sum + f.importance, 0);
-    const totalDemographicImportance = demographicFeatures.reduce((sum, f) => sum + f.importance, 0);
-    
-    if (totalFacialImportance > totalDemographicImportance * 3) {
-        insights.push({
-            id: 9,
-            type: 'image',
-            category: 'IA Comparativa',
-            icon: <Brain className="w-4 h-4 text-violet-600" />,
-            priority: 'medium',
-            message: `Análisis biométrico domina predicción (${totalFacialImportance.toFixed(1)}% facial vs ${totalDemographicImportance.toFixed(1)}% demográfico).`,
-            confidence: 92,
-            processing_step: 'Análisis de balance de features'
-        });
-    }
+    //     if (riesgoRegional && riesgoRegional.analisis_persona > 25) {
+    //         insights.push({
+    //             id: 4,
+    //             type: 'regional',
+    //             category: 'IA Regional',
+    //             icon: <DollarSign className="w-4 h-4 text-red-600" />,
+    //             priority: 'high',
+    //             message: `Sistema experto detecta alto impacto regional (${riesgoRegional.analisis_persona.toFixed(1)}% en perfil individual). Recomendación: evaluación contextual.`,
+    //             confidence: 93,
+    //             processing_step: 'Análisis de riesgo geográfico'
+    //         });
+    //     }
 
-    return insights.sort((a, b) => {
-        const priorityOrder = { high: 3, medium: 2, low: 1 };
-        return priorityOrder[b.priority] - priorityOrder[a.priority];
-    });
-};
+    //     // Análisis de edad con IA
+    //     const edadFeature = demographicFeatures.find(f => f.feature === 'Edad_Real');
+    //     const edadPersona = data.analisis_riesgo.demografico.edad;
+
+    //     if (edadFeature && edadFeature.analisis_persona > 20) {
+    //         insights.push({
+    //             id: 5,
+    //             type: 'demographic',
+    //             category: 'IA Demográfica',
+    //             icon: <GraduationCap className="w-4 h-4 text-amber-600" />,
+    //             priority: edadPersona < 25 ? 'high' : 'medium',
+    //             message: `Modelo detecta edad (${edadPersona} años) con ${edadFeature.analisis_persona.toFixed(1)}% de influencia en predicción individual.`,
+    //             confidence: 88,
+    //             processing_step: 'Análisis de cohorte generacional'
+    //         });
+    //     }
+
+    //     // Análisis ocupacional con IA
+    //     if (data.datos_renap.ocupacion === 'ESTUDIANTE') {
+    //         insights.push({
+    //             id: 6,
+    //             type: 'occupation',
+    //             category: 'IA Ocupacional',
+    //             icon: <User className="w-4 h-4 text-blue-600" />,
+    //             priority: 'medium',
+    //             message: 'Clasificador automático identifica patrón estudiantil. Algoritmo ajusta expectativas de estabilidad de ingresos.',
+    //             confidence: 90,
+    //             processing_step: 'Clasificación ocupacional'
+    //         });
+    //     }
+
+    //     // Análisis del feature más influyente general
+    //     const topFeature = data.analisis_features[0]; // Ya viene ordenado por ranking
+    //     if (topFeature && topFeature.importance > 15) {
+    //         insights.push({
+    //             id: 7,
+    //             type: 'prediction',
+    //             category: 'IA Predictiva',
+    //             icon: <Target className="w-4 h-4 text-indigo-600" />,
+    //             priority: 'high',
+    //             message: `Motor predictivo prioriza "${topFeature.feature}" (ranking #${topFeature.ranking}) con ${topFeature.importance.toFixed(1)}% de importancia global.`,
+    //             confidence: 96,
+    //             processing_step: 'Ranking de características'
+    //         });
+    //     }
+
+    //     // Análisis de confianza del modelo
+    //     if (data.prediccion.nivel_confianza === 'Bajo') {
+    //         insights.push({
+    //             id: 8,
+    //             type: 'prediction',
+    //             category: 'Análisis Predicción',
+    //             icon: <AlertTriangle className="w-4 h-4 text-orange-600" />,
+    //             priority: 'high',
+    //             message: 'El sistema detecta baja confianza en la predicción. Requiere validación manual por analista experimentado.',
+    //             confidence: 85,
+    //             processing_step: 'Evaluación de confianza'
+    //         });
+    //     }
+
+    //     // Análisis combinado facial vs demográfico
+    //     const totalFacialImportance = facialFeatures.reduce((sum, f) => sum + f.importance, 0);
+    //     const totalDemographicImportance = demographicFeatures.reduce((sum, f) => sum + f.importance, 0);
+
+    //     if (totalFacialImportance > totalDemographicImportance * 3) {
+    //         insights.push({
+    //             id: 9,
+    //             type: 'image',
+    //             category: 'IA Comparativa',
+    //             icon: <Brain className="w-4 h-4 text-violet-600" />,
+    //             priority: 'medium',
+    //             message: `Análisis biométrico domina predicción (${totalFacialImportance.toFixed(1)}% facial vs ${totalDemographicImportance.toFixed(1)}% demográfico).`,
+    //             confidence: 92,
+    //             processing_step: 'Análisis de balance de features'
+    //         });
+    //     }
+
+    //     return insights.sort((a, b) => {
+    //         const priorityOrder = { high: 3, medium: 2, low: 1 };
+    //         return priorityOrder[b.priority] - priorityOrder[a.priority];
+    //     });
+    // };
 
     // *** EFECTO ADICIONAL PARA ASEGURAR SCROLL EN MÓVILES ***
     useEffect(() => {

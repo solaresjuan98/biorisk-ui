@@ -76,9 +76,14 @@ export const Result: React.FC<ResultProps> = ({
         if (cameraBase64Photo) {
             return cameraBase64Photo;
         }
-        if (datos_renap.foto) {
-            return `data:image/jpeg;base64,${datos_renap.foto}`;
+        if (datos_renap.foto.startsWith('http')) {
+            return datos_renap.foto; // URL de S3
+        } else {
+            return `data:image/jpeg;base64,${datos_renap.foto}`; // Base64
         }
+        // if (datos_renap.foto) {
+        //     return `data:image/jpeg;base64,${datos_renap.foto}`;
+        // }
         return null;
     };
     console.log(threshold);
@@ -87,7 +92,8 @@ export const Result: React.FC<ResultProps> = ({
 
 
     const hasAnyPhoto = cameraBase64Photo || datos_renap.foto;
-    const isClickable = hasAnyPhoto && !hasProcessedOnce;
+    const isClickable = hasAnyPhoto && !showProcessedImage;
+    // const isClickable = hasAnyPhoto && !hasProcessedOnce;
     const imageSource = getImageSource();
 
     const getSemaforoColor = (categoria: string) => {
@@ -152,10 +158,10 @@ export const Result: React.FC<ResultProps> = ({
                                         className={`relative ${isClickable ? 'cursor-pointer group' : 'cursor-default'}`}
                                         onClick={isClickable ? handleImageProcess : undefined}
                                         title={
-                                            hasProcessedOnce
-                                                ? "Ya procesado"
+                                            showProcessedImage
+                                                ? "Análisis biométrico completado"
                                                 : isClickable
-                                                    ? "Click para análisis biométrico"
+                                                    ? "Click para análisis biométrico con puntos faciales"
                                                     : "Análisis no disponible"
                                         }
                                     >
@@ -177,17 +183,27 @@ export const Result: React.FC<ResultProps> = ({
                                                         <div className="absolute -top-1 -right-1 w-4 h-4 bg-green-500 rounded-full animate-ping"></div>
                                                     </div>
                                                     <p className="text-sm font-semibold">Analizando con IA...</p>
-                                                    <p className="text-xs opacity-90">Detectando puntos biométricos</p>
+                                                    <p className="text-xs opacity-90">Detectando puntos biométricos faciales</p>
                                                 </div>
                                             </div>
                                         )}
 
-                                        {/* Indicador de hover para procesamiento */}
-                                        {isClickable && (
+                                        {/* Indicador de hover para procesamiento - SOLO si no está procesada */}
+                                        {isClickable && !showProcessedImage && (
                                             <div className="absolute inset-0 bg-blue-600/0 group-hover:bg-blue-600/20 transition-all duration-300 flex items-center justify-center opacity-0 group-hover:opacity-100">
                                                 <div className="bg-white/90 px-3 py-2 rounded-lg text-blue-600 font-semibold text-sm flex items-center gap-2">
                                                     <Bot className="w-4 h-4" />
-                                                    Procesar con IA
+                                                    Procesar puntos faciales con IA
+                                                </div>
+                                            </div>
+                                        )}
+
+                                        {/* Indicador de completado - SOLO si ya está procesada */}
+                                        {showProcessedImage && (
+                                            <div className="absolute inset-0 bg-green-600/0 flex items-center justify-center">
+                                                <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 bg-emerald-500/90 px-3 py-2 rounded-lg text-white font-semibold text-sm flex items-center gap-2 opacity-0 hover:opacity-100 transition-all duration-300">
+                                                    <Brain className="w-4 h-4" />
+                                                    Análisis biométrico completado
                                                 </div>
                                             </div>
                                         )}
@@ -196,19 +212,22 @@ export const Result: React.FC<ResultProps> = ({
                                         {handleImageModal && (
                                             <div
                                                 className="absolute top-3 left-3 bg-white/90 p-2 rounded-full cursor-pointer hover:bg-white transition-all shadow-lg"
-                                                onClick={handleImageModal}
+                                                onClick={(e) => {
+                                                    e.stopPropagation(); // Evitar que active el procesamiento
+                                                    handleImageModal();
+                                                }}
                                                 title="Ver imagen ampliada"
                                             >
                                                 <Eye className="w-4 h-4 text-blue-600" />
                                             </div>
                                         )}
 
-                                        {/* Badge de estado */}
+                                        {/* Badge de estado - actualizado */}
                                         <div className={`absolute top-3 right-3 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${showProcessedImage
                                             ? 'bg-emerald-500'
                                             : cameraBase64Photo
                                                 ? 'bg-purple-500'
-                                                : 'bg-orange-500'
+                                                : 'bg-blue-500' // Cambio: azul para fotos de S3/RENAP
                                             }`}>
                                             {showProcessedImage ? (
                                                 <>
@@ -223,23 +242,31 @@ export const Result: React.FC<ResultProps> = ({
                                             ) : (
                                                 <>
                                                     <User className="w-3 h-3" />
-                                                    RENAP
+                                                    RENAP/S3
                                                 </>
                                             )}
                                         </div>
 
-                                        {/* Badge de biométrico activo */}
+                                        {/* Badge de biométrico activo - con puntos faciales */}
                                         {showProcessedImage && (
                                             <div className="absolute bottom-3 left-3 bg-emerald-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 animate-slideIn">
                                                 <Brain className="w-3 h-3" />
-                                                Biométrico Activo
+                                                Puntos Faciales Detectados
+                                            </div>
+                                        )}
+
+                                        {/* Indicador de disponibilidad para procesamiento */}
+                                        {!showProcessedImage && hasAnyPhoto && (
+                                            <div className="absolute bottom-3 right-3 bg-blue-500 text-white px-2 py-1 rounded-full text-xs font-semibold flex items-center gap-1 animate-pulse">
+                                                <Target className="w-3 h-3" />
+                                                Listo para IA
                                             </div>
                                         )}
                                     </div>
                                 )}
                             </div>
 
-                            {/* Contexto de imagen con IA */}
+                            {/* Contexto de imagen con IA - actualizado */}
                             <div className="grid grid-cols-3 gap-2 mt-4">
                                 {/* Badge principal - tipo de imagen */}
                                 <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${!hasAnyPhoto
@@ -248,7 +275,7 @@ export const Result: React.FC<ResultProps> = ({
                                         ? 'bg-emerald-50 border-emerald-200'
                                         : cameraBase64Photo
                                             ? 'bg-purple-50 border-purple-200'
-                                            : 'bg-blue-50 border-blue-200'
+                                            : 'bg-blue-50 border-blue-200' // Cambio: azul para S3
                                     }`}>
                                     {!hasAnyPhoto ? (
                                         <>
@@ -266,42 +293,62 @@ export const Result: React.FC<ResultProps> = ({
                                         <>
                                             <Bot className="w-5 h-5 mx-auto mb-1 text-purple-600" />
                                             <p className="text-xs font-medium mb-1 text-purple-700">Cámara App</p>
-                                            <p className="text-xs font-semibold text-purple-600">Capturado</p>
+                                            <p className="text-xs font-semibold text-purple-600">Disponible</p>
                                         </>
                                     ) : (
                                         <>
                                             <User className="w-5 h-5 mx-auto mb-1 text-blue-600" />
-                                            <p className="text-xs font-medium mb-1 text-blue-700">RENAP</p>
-                                            <p className="text-xs font-semibold text-blue-600">Oficial</p>
+                                            <p className="text-xs font-medium mb-1 text-blue-700">RENAP/S3</p>
+                                            <p className="text-xs font-semibold text-blue-600">Disponible</p>
                                         </>
                                     )}
                                 </div>
 
-                                {/* Badge de luz */}
+                                {/* Badge de procesamiento facial */}
+                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${!hasAnyPhoto
+                                    ? 'bg-gray-50 border-gray-200'
+                                    : showProcessedImage
+                                        ? 'bg-emerald-50 border-emerald-200'
+                                        : 'bg-orange-50 border-orange-200'
+                                    }`}>
+                                    <Eye className={`w-5 h-5 mx-auto mb-1 ${!hasAnyPhoto
+                                        ? 'text-gray-400'
+                                        : showProcessedImage
+                                            ? 'text-emerald-600'
+                                            : 'text-orange-600'
+                                        }`} />
+                                    <p className={`text-xs font-medium mb-1 ${!hasAnyPhoto
+                                        ? 'text-gray-500'
+                                        : showProcessedImage
+                                            ? 'text-emerald-700'
+                                            : 'text-orange-700'
+                                        }`}>
+                                        Puntos Faciales
+                                    </p>
+                                    <p className={`text-xs font-semibold ${!hasAnyPhoto
+                                        ? 'text-gray-400'
+                                        : showProcessedImage
+                                            ? 'text-emerald-600'
+                                            : 'text-orange-600'
+                                        }`}>
+                                        {!hasAnyPhoto ? 'N/A' : showProcessedImage ? 'Detectados' : 'Pendiente'}
+                                    </p>
+                                </div>
+
+                                {/* Badge de calidad */}
                                 <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${!hasAnyPhoto
                                     ? 'bg-gray-50 border-gray-200'
                                     : 'bg-green-50 border-green-200'
                                     }`}>
-                                    <Eye className={`w-5 h-5 mx-auto mb-1 ${!hasAnyPhoto ? 'text-gray-400' : 'text-green-600'}`} />
-                                    <p className={`text-xs font-medium mb-1 ${!hasAnyPhoto ? 'text-gray-500' : 'text-green-700'}`}>
-                                        IA Luz
+                                    <Zap className={`w-5 h-5 mx-auto mb-1 ${!hasAnyPhoto ? 'text-gray-400' : 'text-green-600'
+                                        }`} />
+                                    <p className={`text-xs font-medium mb-1 ${!hasAnyPhoto ? 'text-gray-500' : 'text-green-700'
+                                        }`}>
+                                        Calidad
                                     </p>
-                                    <p className={`text-xs font-semibold ${!hasAnyPhoto ? 'text-gray-400' : 'text-green-600'}`}>
+                                    <p className={`text-xs font-semibold ${!hasAnyPhoto ? 'text-gray-400' : 'text-green-600'
+                                        }`}>
                                         {!hasAnyPhoto ? 'N/A' : 'Óptima'}
-                                    </p>
-                                </div>
-
-                                {/* Badge de flash */}
-                                <div className={`text-center p-2 rounded-lg border transition-all duration-500 ${!hasAnyPhoto
-                                    ? 'bg-gray-50 border-gray-200'
-                                    : 'bg-orange-50 border-orange-200'
-                                    }`}>
-                                    <Zap className={`w-5 h-5 mx-auto mb-1 ${!hasAnyPhoto ? 'text-gray-400' : 'text-orange-600'}`} />
-                                    <p className={`text-xs font-medium mb-1 ${!hasAnyPhoto ? 'text-gray-500' : 'text-orange-700'}`}>
-                                        IA Flash
-                                    </p>
-                                    <p className={`text-xs font-semibold ${!hasAnyPhoto ? 'text-gray-400' : 'text-orange-600'}`}>
-                                        {!hasAnyPhoto ? 'N/A' : 'Activo'}
                                     </p>
                                 </div>
                             </div>
@@ -880,11 +927,11 @@ export const Result: React.FC<ResultProps> = ({
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Categoría:</span>
-                                    <p className="font-medium">{analisis_riesgo.ocupacion.categoria}</p>
+                                    <p className="font-medium ">{analisis_riesgo.ocupacion.categoria}</p>
                                 </div>
                                 <div>
                                     <span className="text-gray-600">Nivel de Riesgo:</span>
-                                    <p className={`font-bold ${analisis_riesgo.ocupacion.nivel_riesgo === 'Muy_Alto' ? 'text-red-600' :
+                                    <p className={`font-bold ${analisis_riesgo.ocupacion.nivel_riesgo === 'Extremo' ? 'text-red-600' :
                                         analisis_riesgo.ocupacion.nivel_riesgo === 'Medio' ? 'text-yellow-600' : 'text-green-600'}`}>
                                         {analisis_riesgo.ocupacion.nivel_riesgo}
                                     </p>
@@ -895,7 +942,7 @@ export const Result: React.FC<ResultProps> = ({
                                         <div className="flex-1 bg-gray-200 rounded-full h-2">
                                             <div
                                                 // className="bg-blue-500 h-2 rounded-full"
-                                                className={`h-2 rounded-full ${analisis_riesgo.ocupacion.nivel_riesgo === 'Muy_Alto' ? 'bg-red-500' :
+                                                className={`h-2 rounded-full ${analisis_riesgo.ocupacion.nivel_riesgo === 'Extremo' ? 'bg-red-500' :
                                                     analisis_riesgo.ocupacion.nivel_riesgo === 'Medio' ? 'bg-yellow-500' : 'bg-emerald-500'
                                                     }`}
                                                 style={{ width: `${(analisis_riesgo.ocupacion.score_riesgo / 5) * 100}%` }}
@@ -1026,49 +1073,7 @@ export const Result: React.FC<ResultProps> = ({
                     </div>
                 </div>
 
-                {/* Explicación de Motivos */}
-                <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-8">
-                    <div className="flex items-center gap-4 mb-6">
-                        <div className="p-3 bg-gradient-to-r from-emerald-600 to-teal-600 rounded-xl">
-                            <Brain className="w-7 h-7 text-white" />
-                        </div>
-                        <h3 className="text-2xl font-bold text-gray-900">Explicación de la Decisión IA</h3>
-                    </div>
-
-                    <div className="grid md:grid-cols-2 gap-6">
-                        {/* Motivos para Mora */}
-                        <div className="p-6 bg-red-50 rounded-xl border border-red-200">
-                            <h4 className="font-bold text-red-900 mb-4 flex items-center gap-2">
-                                <XCircle className="w-5 h-5" />
-                                Factores de Riesgo Detectados
-                            </h4>
-                            <div className="space-y-3">
-                                {explicacion.motivos_mora.map((motivo, index) => (
-                                    <div key={index} className="flex items-start gap-3 p-3 bg-white rounded-lg border border-red-100">
-                                        <AlertCircle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
-                                        <span className="text-sm text-red-800">{motivo}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* Motivos contra Mora */}
-                        <div className="p-6 bg-green-50 rounded-xl border border-green-200">
-                            <h4 className="font-bold text-green-900 mb-4 flex items-center gap-2">
-                                <CheckCircle className="w-5 h-5" />
-                                Factores Protectores Identificados
-                            </h4>
-                            <div className="space-y-3">
-                                {explicacion.motivos_no_mora.map((motivo, index) => (
-                                    <div key={index} className="flex items-start gap-3 p-3 bg-white rounded-lg border border-green-100">
-                                        <CheckCircle className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
-                                        <span className="text-sm text-green-800">{motivo}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                
             </div>
         </div>
     );

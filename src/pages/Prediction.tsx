@@ -14,7 +14,7 @@ import { calcularEdad, formatEstadoCivil, getConfidenceColor, getDecisionBg, get
 import { analyzeCui } from '@/utils/getPrediction';
 import Swal from 'sweetalert2';
 
-const BioRiskAI = () => {
+const Prediction = () => {
     const [cui, setCui] = useState('');
 
     const [departamento, setDepartamento] = useState('');
@@ -58,7 +58,7 @@ const BioRiskAI = () => {
     const processingRef = useRef<HTMLDivElement>(null);
     const resultsRef = useRef<HTMLDivElement>(null);
 
-    // hook de camara
+    // hook de camara con nuevas funcionalidades
     const {
         isCameraOpen,
         photoDataUrl,
@@ -73,6 +73,15 @@ const BioRiskAI = () => {
         facingMode,
         toggleCamera,
         hasMultipleCameras,
+        faceDetected,
+        facePosition,
+        // Nuevas propiedades del sistema de endpoint
+        isValidatingWithEndpoint,
+        validationAttempts,
+        maxValidationAttempts,
+        photoFrozen,
+        resetValidation,
+        setEndpointUrl
     } = useCamera();
 
     const { processingSteps } = useAIProcessing();
@@ -171,8 +180,11 @@ const BioRiskAI = () => {
         // Ocultar botón nueva consulta
         setHasResults(false);
 
-        // Cerrar cámara si está abierta
+        // Cerrar cámara si está abierta y reiniciar validación
         closeCamera();
+        if (resetValidation) {
+            resetValidation();
+        }
 
         // *** SCROLL HACIA ARRIBA AL HACER NUEVA CONSULTA ***
         scrollToTop();
@@ -553,7 +565,7 @@ const BioRiskAI = () => {
                 {/* Header con emphasis en IA */}
                 <Header />
 
-                {/* Búsqueda con IA Enhancement - CON TODOS LOS PROPS INCLUYENDO NUEVA CONSULTA */}
+                {/* Búsqueda con IA Enhancement - CON TODOS LOS PROPS INCLUYENDO NUEVA CONSULTA Y SISTEMA DE ENDPOINT */}
                 <ClientForm
                     cui={cui}
                     setCui={setCui}
@@ -595,6 +607,16 @@ const BioRiskAI = () => {
                     municipio={municipio}
                     photoMode={photoMode}
                     setPhotoMode={setPhotoMode}
+                    faceDetected={faceDetected}
+                    facePosition={facePosition}
+                    detectionCanvasRef={null}  // Ya no se usa con el sistema de endpoint
+                    // Nuevas props para el sistema de endpoint
+                    isValidatingWithEndpoint={isValidatingWithEndpoint}
+                    validationAttempts={validationAttempts}
+                    maxValidationAttempts={maxValidationAttempts}
+                    photoFrozen={photoFrozen}
+                    resetValidation={resetValidation}
+                    setEndpointUrl={setEndpointUrl}
                 />
 
                 {/* SKELETON AQUÍ */}
@@ -874,4 +896,4 @@ const BioRiskAI = () => {
     );
 };
 
-export default BioRiskAI;
+export default Prediction;

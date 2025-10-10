@@ -17,14 +17,16 @@ import {
     RefreshCw,
     Upload,
     Image as ImageIcon,
-    FileImage
+    FileImage,
+    Loader2,
+    Clock
 } from "lucide-react";
-import { SECTORES_ECONOMICOS, getProfesionesBySector } from '@/config';
+import { APP_ENVIRONMENT, SECTORES_ECONOMICOS, getProfesionesBySector } from '@/config';
 
 // Importar catálogos geográficos
 import { DEPARTAMENTOS, getMunicipiosByDepartamento } from '@/config';
 
-// Definir las interfaces para los props (SIN isTogglingCamera)
+// Definir las interfaces para los props (actualizadas para el nuevo sistema)
 interface ClientFormProps {
     cui: string;
     setCui: (value: string) => void;
@@ -59,6 +61,7 @@ interface ClientFormProps {
     onFileCapture: (e: React.ChangeEvent<HTMLInputElement>) => void;
     videoRef: React.RefObject<HTMLVideoElement | null>;
     canvasRef: React.RefObject<HTMLCanvasElement | null>;
+    detectionCanvasRef: React.RefObject<HTMLCanvasElement | null> | null;
     fileInputRef: React.RefObject<HTMLInputElement | null>;
     facingMode: 'user' | 'environment';
     toggleCamera: () => void;
@@ -66,6 +69,15 @@ interface ClientFormProps {
     processingRef: React.RefObject<HTMLDivElement | null>;
     photoMode: 'camera' | 'upload';
     setPhotoMode: (mode: 'camera' | 'upload') => void;
+    faceDetected: boolean;
+    facePosition: { x: number, y: number, width: number, height: number } | null;
+    // Nuevas props para el sistema de endpoint
+    isValidatingWithEndpoint?: boolean;
+    validationAttempts?: number;
+    maxValidationAttempts?: number;
+    photoFrozen?: boolean;
+    resetValidation?: () => void;
+    setEndpointUrl?: (url: string) => void;
 }
 
 // Componente de Select Personalizado
@@ -216,21 +228,38 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     toggleCamera,
     processingRef,
     photoMode,
-    setPhotoMode
+    setPhotoMode,
+    faceDetected,
+    // Nuevas props
+    isValidatingWithEndpoint = false,
+    validationAttempts = 0,
+    maxValidationAttempts = 10,
+    photoFrozen = false,
+    resetValidation,
+    setEndpointUrl
 }) => {
 
     const [cuiError, setCuiError] = useState('');
     const [edadError, setEdadError] = useState('');
-    
+
     // Estados para el sistema de pestañas de fotografía
-    // const [photoMode, setPhotoMode] = useState<'camera' | 'upload'>('camera');
     const [isDragOver, setIsDragOver] = useState(false);
+
+    // Estado para configurar la URL del endpoint
+    const [endpointConfig, setEndpointConfig] = useState('http://localhost:8000/api/validate-face');
 
     const profesionInputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
     const uploadInputRef = useRef<HTMLInputElement>(null);
 
-    // Opciones para los selects personalizados
+    // Configurar endpoint URL cuando cambie
+    useEffect(() => {
+        if (setEndpointUrl) {
+            setEndpointUrl(endpointConfig);
+        }
+    }, [endpointConfig, setEndpointUrl]);
+
+    // Opciones para los selects personalizados (usando config original)
     const sectoresOptions = SECTORES_ECONOMICOS.map(sector => ({
         value: sector,
         label: sector
@@ -241,13 +270,13 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         label: prof
     }));
 
-    // Opciones para departamentos
+    // Opciones para departamentos (usando config original)
     const departamentosOptions = DEPARTAMENTOS.map(dept => ({
         value: dept,
         label: dept
     }));
 
-    // Opciones para municipios basados en el departamento seleccionado
+    // Opciones para municipios basados en el departamento seleccionado (usando config original)
     const municipiosOptions = getMunicipiosByDepartamento(departamento).map(mun => ({
         value: mun,
         label: mun
@@ -288,7 +317,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragOver(false);
-        
+
         const files = e.dataTransfer.files;
         if (files.length > 0) {
             const file = files[0];
@@ -321,6 +350,13 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         e.target.value = '';
     };
 
+    // Función para reiniciar validación
+    const handleResetValidation = () => {
+        if (resetValidation) {
+            resetValidation();
+        }
+    };
+
     // Cerrar sugerencias al hacer clic fuera
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent) => {
@@ -350,6 +386,40 @@ export const ClientForm: React.FC<ClientFormProps> = ({
             profesion.trim() &&
             estadoCivil &&
             dependientes >= 0;
+    };
+
+    // Función para obtener el texto del botón de captura
+    const getCaptureButtonText = () => {
+        if (photoFrozen && faceDetected) {
+            return 'Guardar Foto';
+        }
+        if (isValidatingWithEndpoint) {
+            return 'Validando...';
+        }
+        return 'Capturar Foto';
+    };
+
+    // Función para obtener el estado de la guía circular
+    const getGuideState = () => {
+        if (photoFrozen && faceDetected) {
+            return {
+                color: "#10B981", // Verde
+                strokeDasharray: "0",
+                className: "animate-pulse"
+            };
+        }
+        if (isValidatingWithEndpoint) {
+            return {
+                color: "#F59E0B", // Amarillo/Naranja
+                strokeDasharray: "3 3",
+                className: "animate-pulse"
+            };
+        }
+        return {
+            color: "#EF4444", // Rojo
+            strokeDasharray: "3 3",
+            className: ""
+        };
     };
 
     return (
@@ -552,23 +622,38 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                         </div>
                     </div>
 
-                    {/* Sección 3: Fotografía (opcional) - MEJORADA */}
+                    {/* Sección 3: Fotografía con detección facial mejorada por endpoint */}
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 md:p-6 border border-purple-100">
                         <div className="flex items-center gap-2 mb-4">
                             <Camera className="w-5 h-5 text-purple-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">Fotografía</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">Fotografía Facial</h3>
                         </div>
+
+                        {/* Configuración del endpoint (para desarrollo) */}
+                        {/* {APP_ENVIRONMENT === 'development' && (
+                            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                <label className="block text-sm font-medium text-blue-800 mb-2">
+                                    URL del Endpoint de Validación (Desarrollo)
+                                </label>
+                                <input
+                                    type="text"
+                                    value={endpointConfig}
+                                    onChange={(e) => setEndpointConfig(e.target.value)}
+                                    placeholder="http://localhost:8000/api/validate-face"
+                                    className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
+                                />
+                            </div>
+                        )} */}
 
                         {/* Pestañas para seleccionar modo de fotografía */}
                         <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
                             <button
                                 type="button"
                                 onClick={() => handlePhotoModeChange('camera')}
-                                className={`cursor-pointer flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-                                    photoMode === 'camera'
-                                        ? 'bg-white text-purple-700 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-800'
-                                }`}
+                                className={`cursor-pointer flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${photoMode === 'camera'
+                                    ? 'bg-white text-purple-700 shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-800'
+                                    }`}
                             >
                                 <Camera className="w-4 h-4" />
                                 Tomar Foto
@@ -576,11 +661,10 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                             <button
                                 type="button"
                                 onClick={() => handlePhotoModeChange('upload')}
-                                className={`cursor-pointer flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
-                                    photoMode === 'upload'
-                                        ? 'bg-white text-purple-700 shadow-sm'
-                                        : 'text-gray-600 hover:text-gray-800'
-                                }`}
+                                className={`cursor-pointer flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${photoMode === 'upload'
+                                    ? 'bg-white text-purple-700 shadow-sm'
+                                    : 'text-gray-600 hover:text-gray-800'
+                                    }`}
                             >
                                 <Upload className="w-4 h-4" />
                                 Subir Archivo
@@ -595,17 +679,22 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                     <button
                                         type="button"
                                         onClick={openCamera}
-                                        className="cursor-pointer w-full px-4 py-3 bg-white border border-gray-300 hover:border-purple-400 text-gray-900 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow"
+                                        disabled={isCameraOpen}
+                                        className={`w-full px-4 py-3 border rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-sm ${isCameraOpen
+                                            ? 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-white border-gray-300 hover:border-purple-400 text-gray-900 cursor-pointer hover:shadow'
+                                            }`}
                                     >
                                         <Camera className="w-5 h-5" />
-                                        Abrir Cámara
+                                        {isCameraOpen ? 'Cámara Activa' : 'Abrir Cámara para Selfie'}
                                     </button>
                                 </div>
 
-                                {/* Panel de cámara */}
+                                {/* Panel de cámara con detección facial por endpoint */}
                                 {isCameraOpen && (
                                     <div className="p-4 border rounded-2xl bg-black/90 text-white">
                                         <div className="relative rounded-xl overflow-hidden">
+                                            {/* Video de la cámara */}
                                             <video
                                                 ref={videoRef}
                                                 className="w-full max-h-[60vh] rounded-xl bg-black"
@@ -614,22 +703,141 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                 muted
                                             />
 
+                                            {/* Overlay con círculo guía, óvalo facial y esquinas de marco */}
+                                            {/* Overlay con círculo guía, óvalo facial y esquinas de marco */}
+                                            <div className="absolute inset-0 pointer-events-none">
+                                                <svg
+                                                    className="w-full h-full"
+                                                    viewBox="0 0 100 100"
+                                                    preserveAspectRatio="xMidYMid slice"
+                                                >
+                                                    <defs>
+                                                        {/* Definir máscara circular */}
+                                                        <mask id="circle-mask">
+                                                            <rect width="100" height="100" fill="white" />
+                                                            <circle cx="50" cy="50" r="24" fill="black" />
+                                                        </mask>
+                                                    </defs>
+
+                                                    {/* Fondo negro con máscara circular */}
+                                                    <rect
+                                                        width="100"
+                                                        height="100"
+                                                        fill="black"
+                                                        fillOpacity="0.7"
+                                                        mask="url(#circle-mask)"
+                                                    />
+
+                                                    {/* Círculo guía principal */}
+                                                    <circle
+                                                        cx="50"
+                                                        cy="50"
+                                                        r="26"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="0.8"
+                                                        strokeDasharray={getGuideState().strokeDasharray}
+                                                        className={getGuideState().className}
+                                                    />
+
+                                                    {/* Óvalo simulando rostro humano dentro del círculo */}
+                                                    <ellipse
+                                                        cx="50"
+                                                        cy="52"
+                                                        rx="10"
+                                                        ry="14"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="0.5"
+                                                        strokeDasharray="2 2"
+                                                        opacity="0.6"
+                                                    />
+
+                                                    {/* Esquinas del marco - Superior Izquierda */}
+                                                    <path
+                                                        d="M 34 38 L 34 32 L 40 32"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1"
+                                                        strokeLinecap="round"
+                                                    />
+
+                                                    {/* Esquina Superior Derecha */}
+                                                    <path
+                                                        d="M 60 32 L 66 32 L 66 38"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1"
+                                                        strokeLinecap="round"
+                                                    />
+
+                                                    {/* Esquina Inferior Izquierda */}
+                                                    <path
+                                                        d="M 34 62 L 34 68 L 40 68"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1"
+                                                        strokeLinecap="round"
+                                                    />
+
+                                                    {/* Esquina Inferior Derecha */}
+                                                    <path
+                                                        d="M 60 68 L 66 68 L 66 62"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1"
+                                                        strokeLinecap="round"
+                                                    />
+                                                </svg>
+                                            </div>
+
+                                            {/* Instrucciones en pantalla */}
+                                            <div className="absolute top-4 left-4 right-4">
+                                                <div className={`px-4 py-2 rounded-lg backdrop-blur-md text-sm font-medium text-center ${photoFrozen && faceDetected
+                                                    ? 'bg-green-600/80 text-white'
+                                                    : isValidatingWithEndpoint
+                                                        ? 'bg-blue-600/80 text-white'
+                                                        : 'bg-orange-600/80 text-white'
+                                                    }`}>
+                                                    {photoFrozen && faceDetected ? (
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <CheckCircle className="w-4 h-4" />
+                                                            Rostro válido detectado - Listo para guardar
+                                                        </div>
+                                                    ) : isValidatingWithEndpoint ? (
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <Loader2 className="w-4 h-4 animate-spin" />
+                                                            Validando rostro... ({validationAttempts}/{maxValidationAttempts})
+                                                        </div>
+                                                    ) : (
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            <Clock className="w-4 h-4" />
+                                                            Coloca tu rostro dentro del círculo
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
                                             {/* Botón para cambiar cámara */}
                                             {hasMultipleCameras && (
                                                 <button
                                                     type="button"
                                                     onClick={toggleCamera}
-                                                    className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-md hover:bg-white/30 rounded-full transition-all duration-200"
+                                                    disabled={isValidatingWithEndpoint}
+                                                    className={`absolute top-4 right-4 p-3 backdrop-blur-md rounded-full transition-all duration-200 ${isValidatingWithEndpoint
+                                                        ? 'bg-gray-500/20 cursor-not-allowed'
+                                                        : 'bg-white/20 hover:bg-white/30 cursor-pointer'
+                                                        }`}
                                                     title={facingMode === 'user' ? 'Cambiar a cámara trasera' : 'Cambiar a cámara frontal'}
                                                 >
-                                                    <RefreshCw className="w-5 h-5 text-white" />
+                                                    <RefreshCw className={`w-5 h-5 text-white ${isValidatingWithEndpoint ? 'opacity-50' : ''}`} />
                                                 </button>
                                             )}
 
                                             {/* Indicador de cámara activa */}
-                                            <div className="absolute top-4 left-4 px-3 py-1 bg-green-600/80 backdrop-blur-md rounded-full">
+                                            <div className="absolute bottom-4 left-4 px-3 py-1 bg-blue-600/80 backdrop-blur-md rounded-full">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
+                                                    <div className="w-2 h-2 bg-blue-300 rounded-full animate-pulse"></div>
                                                     <span className="text-xs font-medium">
                                                         {facingMode === 'user' ? 'Cámara frontal' : 'Cámara trasera'}
                                                     </span>
@@ -637,14 +845,37 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                             </div>
                                         </div>
 
+                                        {/* Controles de la cámara */}
                                         <div className="flex items-center justify-center gap-3 mt-4">
                                             <button
                                                 type="button"
                                                 onClick={capturePhoto}
-                                                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold transition-colors"
+                                                disabled={!faceDetected || !photoFrozen || isValidatingWithEndpoint}
+                                                className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 ${faceDetected && photoFrozen && !isValidatingWithEndpoint
+                                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                                                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                                    }`}
                                             >
-                                                Capturar
+                                                <Camera className="w-4 h-4" />
+                                                {getCaptureButtonText()}
                                             </button>
+
+                                            {/* Botón para reiniciar validación */}
+                                            {(validationAttempts > 0 && !photoFrozen) && (
+                                                <button
+                                                    type="button"
+                                                    onClick={handleResetValidation}
+                                                    disabled={isValidatingWithEndpoint}
+                                                    className={`px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 ${isValidatingWithEndpoint
+                                                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                                        : 'bg-yellow-600 hover:bg-yellow-700 text-white cursor-pointer'
+                                                        }`}
+                                                >
+                                                    <RefreshCw className="w-4 h-4" />
+                                                    Reintentar
+                                                </button>
+                                            )}
+
                                             <button
                                                 type="button"
                                                 onClick={closeCamera}
@@ -652,6 +883,20 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                             >
                                                 Cancelar
                                             </button>
+                                        </div>
+
+                                        {/* Instrucciones adicionales y estadísticas */}
+                                        <div className="mt-3 text-center space-y-2">
+                                            <div className="text-sm text-gray-300">
+                                                <p>• Mantén tu rostro centrado en el círculo</p>
+                                                <p>• El sistema validará automáticamente cada 3 segundos</p>
+                                                <p>• Asegúrate de tener buena iluminación</p>
+                                            </div>
+                                            {validationAttempts > 0 && (
+                                                <div className="text-xs text-blue-300">
+                                                    Intentos de validación: {validationAttempts}/{maxValidationAttempts}
+                                                </div>
+                                            )}
                                         </div>
                                     </div>
                                 )}
@@ -666,23 +911,20 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
                                     onClick={() => uploadInputRef.current?.click()}
-                                    className={`w-full border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${
-                                        isDragOver
-                                            ? 'border-purple-500 bg-purple-50 scale-105'
-                                            : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50'
-                                    }`}
+                                    className={`w-full border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${isDragOver
+                                        ? 'border-purple-500 bg-purple-50 scale-105'
+                                        : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50'
+                                        }`}
                                 >
                                     <div className="flex flex-col items-center gap-4">
-                                        <div className={`p-4 rounded-full transition-colors duration-300 ${
-                                            isDragOver ? 'bg-purple-200' : 'bg-gray-100'
-                                        }`}>
-                                            <FileImage className={`w-8 h-8 transition-colors duration-300 ${
-                                                isDragOver ? 'text-purple-600' : 'text-gray-500'
-                                            }`} />
+                                        <div className={`p-4 rounded-full transition-colors duration-300 ${isDragOver ? 'bg-purple-200' : 'bg-gray-100'
+                                            }`}>
+                                            <FileImage className={`w-8 h-8 transition-colors duration-300 ${isDragOver ? 'text-purple-600' : 'text-gray-500'
+                                                }`} />
                                         </div>
                                         <div className="space-y-2">
                                             <h4 className="text-lg font-semibold text-gray-900">
-                                                {isDragOver ? '¡Suelta la imagen aquí!' : 'Subir imagen'}
+                                                {isDragOver ? '¡Suelta la imagen aquí!' : 'Subir imagen facial'}
                                             </h4>
                                             <p className="text-sm text-gray-600">
                                                 Arrastra y suelta una imagen o{' '}
@@ -706,6 +948,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                             </div>
                         )}
 
+                        {photoDataUrl ? "existe" : "no existe"}
                         {/* Preview de foto (común para ambos modos) */}
                         {photoDataUrl && (
                             <div className="mt-4 flex items-center justify-between gap-4 p-4 border rounded-xl bg-white shadow-sm">
@@ -726,13 +969,19 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                             Imagen lista para enviar
                                         </p>
                                         <p className="text-gray-500">
-                                            {photoMode === 'camera' ? 'Foto capturada con la cámara' : 'Archivo subido correctamente'}
+                                            {photoMode === 'camera' ?
+                                                'Foto facial validada y capturada' :
+                                                'Archivo subido correctamente'
+                                            }
                                         </p>
                                     </div>
                                 </div>
                                 <button
                                     type="button"
-                                    onClick={() => setPhotoDataUrl(null)}
+                                    onClick={() => {
+                                        setPhotoDataUrl(null);
+                                        handleResetValidation();
+                                    }}
                                     className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 transition-colors duration-200"
                                 >
                                     <X className="w-4 h-4" />

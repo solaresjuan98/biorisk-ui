@@ -64,6 +64,8 @@ interface ClientFormProps {
     toggleCamera: () => void;
     hasMultipleCameras: boolean;
     processingRef: React.RefObject<HTMLDivElement | null>;
+    photoMode: 'camera' | 'upload';
+    setPhotoMode: (mode: 'camera' | 'upload') => void;
 }
 
 // Componente de Select Personalizado
@@ -212,14 +214,16 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     facingMode,
     hasMultipleCameras,
     toggleCamera,
-    processingRef
+    processingRef,
+    photoMode,
+    setPhotoMode
 }) => {
 
     const [cuiError, setCuiError] = useState('');
     const [edadError, setEdadError] = useState('');
     
     // Estados para el sistema de pestañas de fotografía
-    const [photoMode, setPhotoMode] = useState<'camera' | 'upload'>('camera');
+    // const [photoMode, setPhotoMode] = useState<'camera' | 'upload'>('camera');
     const [isDragOver, setIsDragOver] = useState(false);
 
     const profesionInputRef = useRef<HTMLInputElement>(null);

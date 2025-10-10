@@ -29,6 +29,7 @@ const BioRiskAI = () => {
     const [profesion, setProfesion] = useState('');
     const [estadoCivil, setEstadoCivil] = useState('');
     const [dependientes, setDependientes] = useState(0);
+    const [photoMode, setPhotoMode] = useState<'camera' | 'upload'>('camera');
     // *** FIN NUEVOS ESTADOS ***
 
     const [resultados, setResultados] = useState<PredictionResponse | null>(null);
@@ -446,7 +447,13 @@ const BioRiskAI = () => {
                 const image_base64 = photoDataUrl;
 
                 // console.log(image_base64);
-                
+                // if(photoDataUrl) {
+                //     console.log('Info de la foto');
+                //     console.log('modo de la captura', photoMode);
+                    
+                // }
+                console.log('modo de la captura', photoMode);
+
                 
                 const response = await analyzeCui({
                     cui,
@@ -586,6 +593,8 @@ const BioRiskAI = () => {
                     processingRef={processingRef}
                     departamento={departamento}
                     municipio={municipio}
+                    photoMode={photoMode}
+                    setPhotoMode={setPhotoMode}
                 />
 
                 {/* SKELETON AQUÍ */}

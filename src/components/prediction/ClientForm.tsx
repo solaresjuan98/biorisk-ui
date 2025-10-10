@@ -14,7 +14,10 @@ import {
     User,
     Users,
     X,
-    RefreshCw
+    RefreshCw,
+    Upload,
+    Image as ImageIcon,
+    FileImage
 } from "lucide-react";
 import { SECTORES_ECONOMICOS, getProfesionesBySector } from '@/config';
 
@@ -171,7 +174,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     );
 };
 
-
 export const ClientForm: React.FC<ClientFormProps> = ({
     cui,
     setCui,
@@ -215,11 +217,14 @@ export const ClientForm: React.FC<ClientFormProps> = ({
 
     const [cuiError, setCuiError] = useState('');
     const [edadError, setEdadError] = useState('');
+    
+    // Estados para el sistema de pestañas de fotografía
+    const [photoMode, setPhotoMode] = useState<'camera' | 'upload'>('camera');
+    const [isDragOver, setIsDragOver] = useState(false);
 
     const profesionInputRef = useRef<HTMLInputElement>(null);
     const suggestionsRef = useRef<HTMLDivElement>(null);
-
-
+    const uploadInputRef = useRef<HTMLInputElement>(null);
 
     // Opciones para los selects personalizados
     const sectoresOptions = SECTORES_ECONOMICOS.map(sector => ({
@@ -252,10 +257,64 @@ export const ClientForm: React.FC<ClientFormProps> = ({
 
     // Manejar cambios en el select del departamento
     const handleDepartamentoChange = (value: string) => {
-        console.log("value", value);
-
         setDepartamento(value);
         setMunicipio('');
+    };
+
+    // Manejar el cambio de modo de fotografía
+    const handlePhotoModeChange = (mode: 'camera' | 'upload') => {
+        setPhotoMode(mode);
+        // Si se cambia a upload y la cámara está abierta, cerrarla
+        if (mode === 'upload' && isCameraOpen) {
+            closeCamera();
+        }
+    };
+
+    // Manejar la subida de archivos por drag & drop
+    const handleDragOver = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(true);
+    };
+
+    const handleDragLeave = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+    };
+
+    const handleDrop = (e: React.DragEvent) => {
+        e.preventDefault();
+        setIsDragOver(false);
+        
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            const file = files[0];
+            if (file.type.startsWith('image/')) {
+                processImageFile(file);
+            }
+        }
+    };
+
+    // Procesar archivo de imagen
+    const processImageFile = (file: File) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const result = e.target?.result as string;
+            setPhotoDataUrl(result);
+        };
+        reader.readAsDataURL(file);
+    };
+
+    // Manejar la selección de archivo desde el input
+    const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const files = e.target.files;
+        if (files && files.length > 0) {
+            const file = files[0];
+            if (file.type.startsWith('image/')) {
+                processImageFile(file);
+            }
+        }
+        // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
+        e.target.value = '';
     };
 
     // Cerrar sugerencias al hacer clic fuera
@@ -400,6 +459,11 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                     className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                                 />
                             </div>
+                            {
+                                edadError && (
+                                    <p className="mt-1 text-sm text-red-600 lg:col-span-2">{edadError}</p>
+                                )
+                            }
                         </div>
                     </div>
 
@@ -484,101 +548,192 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                         </div>
                     </div>
 
-                    {/* Sección 3: Fotografía (opcional) */}
+                    {/* Sección 3: Fotografía (opcional) - MEJORADA */}
                     <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 md:p-6 border border-purple-100">
                         <div className="flex items-center gap-2 mb-4">
                             <Camera className="w-5 h-5 text-purple-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">Fotografía (Opcional)</h3>
+                            <h3 className="text-lg font-semibold text-gray-900">Fotografía</h3>
                         </div>
 
-                        {/* Botón para tomar foto */}
-                        <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                        {/* Pestañas para seleccionar modo de fotografía */}
+                        <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
                             <button
                                 type="button"
-                                onClick={openCamera}
-                                className="flex-1 px-4 py-3 bg-white border border-gray-300 hover:border-purple-400 text-gray-900 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow"
+                                onClick={() => handlePhotoModeChange('camera')}
+                                className={`cursor-pointer flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                                    photoMode === 'camera'
+                                        ? 'bg-white text-purple-700 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-800'
+                                }`}
                             >
-                                <Camera className="w-5 h-5" />
-                                Tomar foto
+                                <Camera className="w-4 h-4" />
+                                Tomar Foto
+                            </button>
+                            <button
+                                type="button"
+                                onClick={() => handlePhotoModeChange('upload')}
+                                className={`cursor-pointer flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${
+                                    photoMode === 'upload'
+                                        ? 'bg-white text-purple-700 shadow-sm'
+                                        : 'text-gray-600 hover:text-gray-800'
+                                }`}
+                            >
+                                <Upload className="w-4 h-4" />
+                                Subir Archivo
                             </button>
                         </div>
 
-                        {/* Preview de foto */}
+                        {/* Contenido según el modo seleccionado */}
+                        {photoMode === 'camera' && (
+                            <div>
+                                {/* Botón para tomar foto */}
+                                <div className="mb-4">
+                                    <button
+                                        type="button"
+                                        onClick={openCamera}
+                                        className="cursor-pointer w-full px-4 py-3 bg-white border border-gray-300 hover:border-purple-400 text-gray-900 rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-sm hover:shadow"
+                                    >
+                                        <Camera className="w-5 h-5" />
+                                        Abrir Cámara
+                                    </button>
+                                </div>
+
+                                {/* Panel de cámara */}
+                                {isCameraOpen && (
+                                    <div className="p-4 border rounded-2xl bg-black/90 text-white">
+                                        <div className="relative rounded-xl overflow-hidden">
+                                            <video
+                                                ref={videoRef}
+                                                className="w-full max-h-[60vh] rounded-xl bg-black"
+                                                autoPlay
+                                                playsInline
+                                                muted
+                                            />
+
+                                            {/* Botón para cambiar cámara */}
+                                            {hasMultipleCameras && (
+                                                <button
+                                                    type="button"
+                                                    onClick={toggleCamera}
+                                                    className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-md hover:bg-white/30 rounded-full transition-all duration-200"
+                                                    title={facingMode === 'user' ? 'Cambiar a cámara trasera' : 'Cambiar a cámara frontal'}
+                                                >
+                                                    <RefreshCw className="w-5 h-5 text-white" />
+                                                </button>
+                                            )}
+
+                                            {/* Indicador de cámara activa */}
+                                            <div className="absolute top-4 left-4 px-3 py-1 bg-green-600/80 backdrop-blur-md rounded-full">
+                                                <div className="flex items-center gap-2">
+                                                    <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
+                                                    <span className="text-xs font-medium">
+                                                        {facingMode === 'user' ? 'Cámara frontal' : 'Cámara trasera'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="flex items-center justify-center gap-3 mt-4">
+                                            <button
+                                                type="button"
+                                                onClick={capturePhoto}
+                                                className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold transition-colors"
+                                            >
+                                                Capturar
+                                            </button>
+                                            <button
+                                                type="button"
+                                                onClick={closeCamera}
+                                                className="px-5 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition-colors"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
+                        {photoMode === 'upload' && (
+                            <div>
+                                {/* Zona de drop para archivos */}
+                                <div
+                                    onDragOver={handleDragOver}
+                                    onDragLeave={handleDragLeave}
+                                    onDrop={handleDrop}
+                                    onClick={() => uploadInputRef.current?.click()}
+                                    className={`w-full border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${
+                                        isDragOver
+                                            ? 'border-purple-500 bg-purple-50 scale-105'
+                                            : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50'
+                                    }`}
+                                >
+                                    <div className="flex flex-col items-center gap-4">
+                                        <div className={`p-4 rounded-full transition-colors duration-300 ${
+                                            isDragOver ? 'bg-purple-200' : 'bg-gray-100'
+                                        }`}>
+                                            <FileImage className={`w-8 h-8 transition-colors duration-300 ${
+                                                isDragOver ? 'text-purple-600' : 'text-gray-500'
+                                            }`} />
+                                        </div>
+                                        <div className="space-y-2">
+                                            <h4 className="text-lg font-semibold text-gray-900">
+                                                {isDragOver ? '¡Suelta la imagen aquí!' : 'Subir imagen'}
+                                            </h4>
+                                            <p className="text-sm text-gray-600">
+                                                Arrastra y suelta una imagen o{' '}
+                                                <span className="text-purple-600 font-medium">haz clic para seleccionar</span>
+                                            </p>
+                                            <p className="text-xs text-gray-500">
+                                                Formatos soportados: JPG, PNG, GIF, WebP
+                                            </p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Input de archivo oculto */}
+                                <input
+                                    ref={uploadInputRef}
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={handleFileSelect}
+                                    className="hidden"
+                                />
+                            </div>
+                        )}
+
+                        {/* Preview de foto (común para ambos modos) */}
                         {photoDataUrl && (
-                            <div className="flex items-center justify-between gap-4 p-3 border rounded-xl bg-white">
+                            <div className="mt-4 flex items-center justify-between gap-4 p-4 border rounded-xl bg-white shadow-sm">
                                 <div className="flex items-center gap-3">
-                                    <img
-                                        src={photoDataUrl}
-                                        alt="Foto capturada"
-                                        className="w-16 h-16 rounded-lg object-cover border"
-                                    />
+                                    <div className="relative">
+                                        <img
+                                            src={photoDataUrl}
+                                            alt="Foto capturada"
+                                            className="w-20 h-20 rounded-lg object-cover border-2 border-gray-200"
+                                        />
+                                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                            <CheckCircle className="w-4 h-4 text-white" />
+                                        </div>
+                                    </div>
                                     <div className="text-sm text-gray-700">
-                                        <p className="font-semibold">Foto lista para enviar</p>
-                                        <p className="text-gray-500">Se adjuntará junto con los datos</p>
+                                        <p className="font-semibold flex items-center gap-1">
+                                            <ImageIcon className="w-4 h-4 text-green-600" />
+                                            Imagen lista para enviar
+                                        </p>
+                                        <p className="text-gray-500">
+                                            {photoMode === 'camera' ? 'Foto capturada con la cámara' : 'Archivo subido correctamente'}
+                                        </p>
                                     </div>
                                 </div>
                                 <button
                                     type="button"
                                     onClick={() => setPhotoDataUrl(null)}
-                                    className="flex items-center gap-2 px-3 py-2 rounded-lg border text-gray-700 hover:bg-gray-50"
+                                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 transition-colors duration-200"
                                 >
                                     <X className="w-4 h-4" />
-                                    Quitar
+                                    Eliminar
                                 </button>
-                            </div>
-                        )}
-
-                        {/* Panel de cámara */}
-                        {isCameraOpen && (
-                            <div className="mt-4 p-4 border rounded-2xl bg-black/90 text-white">
-                                <div className="relative rounded-xl overflow-hidden">
-                                    <video
-                                        ref={videoRef}
-                                        className="w-full max-h-[60vh] rounded-xl bg-black"
-                                        autoPlay
-                                        playsInline
-                                        muted
-                                    />
-
-                                    {/* Botón para cambiar cámara - SIMPLIFICADO */}
-                                    {hasMultipleCameras && (
-                                        <button
-                                            type="button"
-                                            onClick={toggleCamera}
-                                            className="absolute top-4 right-4 p-3 bg-white/20 backdrop-blur-md hover:bg-white/30 rounded-full transition-all duration-200"
-                                            title={facingMode === 'user' ? 'Cambiar a cámara trasera' : 'Cambiar a cámara frontal'}
-                                        >
-                                            <RefreshCw className="w-5 h-5 text-white" />
-                                        </button>
-                                    )}
-
-                                    {/* Indicador de cámara activa */}
-                                    <div className="absolute top-4 left-4 px-3 py-1 bg-green-600/80 backdrop-blur-md rounded-full">
-                                        <div className="flex items-center gap-2">
-                                            <div className="w-2 h-2 bg-green-300 rounded-full animate-pulse"></div>
-                                            <span className="text-xs font-medium">
-                                                {facingMode === 'user' ? 'Cámara frontal' : 'Cámara trasera'}
-                                            </span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="flex items-center justify-center gap-3 mt-4">
-                                    <button
-                                        type="button"
-                                        onClick={capturePhoto}
-                                        className="px-5 py-3 bg-emerald-600 hover:bg-emerald-700 rounded-xl font-semibold transition-colors"
-                                    >
-                                        Capturar
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={closeCamera}
-                                        className="px-5 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition-colors"
-                                    >
-                                        Cancelar
-                                    </button>
-                                </div>
                             </div>
                         )}
                     </div>

@@ -7,7 +7,7 @@ const apiMediapipe = axios.create({
   headers: {
     "Content-Type": "application/json",
   },
-  timeout: 10000, // opcional: 10s
+  // timeout: 60000, // opcional: 10s
 });
 
 export default apiMediapipe;

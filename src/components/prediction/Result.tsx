@@ -81,10 +81,7 @@ export const Result: React.FC<ResultProps> = ({
         } else {
             return `data:image/jpeg;base64,${datos_renap.foto}`; // Base64
         }
-        // if (datos_renap.foto) {
-        //     return `data:image/jpeg;base64,${datos_renap.foto}`;
-        // }
-        return null;
+
     };
     console.log(threshold);
     // console.log(analisis);
@@ -625,108 +622,7 @@ export const Result: React.FC<ResultProps> = ({
                         )}
                     </div>
                 </div>
-                {/* <div className="lg:col-span-2 bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-6">
-                    <div className="flex items-center gap-3 mb-6">
-                        <div className="p-3 bg-gradient-to-r from-purple-600 to-pink-600 rounded-xl">
-                            <Brain className="w-6 h-6 text-white" />
-                        </div>
-                        <h3 className="text-xl font-bold text-gray-900">Insights de Inteligencia Artificial</h3>
-                        <div className="px-3 py-1 bg-green-100 text-green-700 rounded-full text-xs font-semibold border border-green-200 flex items-center gap-1">
-                            <Sparkles className="w-3 h-3" />
-                            IA Activa
-                        </div>
-                    </div>
-
-                    <div className="space-y-4">
-                        {analisis_features && analisis_features
-                            .filter(feature => feature.analisis_persona !== 0)
-                            .sort((a, b) => b.analisis_persona - a.analisis_persona)
-                            .slice(0, 6)
-                            .map((feature, index) => {
-                                const impactLevel = feature.analisis_persona >= 15 ? 'high' : feature.analisis_persona >= 8 ? 'medium' : 'low';
-                                const bgColor = impactLevel === 'high' ? 'bg-red-50 border-red-200' :
-                                    impactLevel === 'medium' ? 'bg-yellow-50 border-yellow-200' :
-                                        'bg-blue-50 border-blue-200';
-
-                                return (
-                                    <div
-                                        key={feature.feature}
-                                        className={`p-5 rounded-xl border transition-all duration-500 ${bgColor}`}
-                                        style={{
-                                            animationDelay: `${index * 200}ms`,
-                                            animation: 'slideIn 0.5s ease-out forwards'
-                                        }}
-                                    >
-                                        <div className="flex items-start gap-4">
-                                            <div className="flex-shrink-0">
-                                                <div className={`w-10 h-10 rounded-full flex items-center justify-center ${impactLevel === 'high' ? 'bg-red-100' :
-                                                        impactLevel === 'medium' ? 'bg-yellow-100' :
-                                                            'bg-blue-100'
-                                                    }`}>
-                                                    {feature.categoria_feature === 'Demográfico' ? <Users className="w-5 h-5 text-purple-600" /> :
-                                                        feature.categoria_feature === 'Facial' ? <Eye className="w-5 h-5 text-blue-600" /> :
-                                                            <Target className="w-5 h-5 text-emerald-600" />}
-                                                </div>
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2 mb-2 flex-wrap">
-                                                    <span className="text-xs bg-white px-2 py-1 rounded-full font-bold border">
-                                                        {feature.categoria_feature.toUpperCase()}
-                                                    </span>
-                                                    <span className={`text-xs px-2 py-1 rounded-full font-bold ${getPriorityColor(impactLevel)} flex items-center gap-1`}>
-                                                        {impactLevel === 'high' ? (
-                                                            <AlertCircle className="w-3 h-3" />
-                                                        ) : impactLevel === 'medium' ? (
-                                                            <Clock className="w-3 h-3" />
-                                                        ) : (
-                                                            <Eye className="w-3 h-3" />
-                                                        )}
-                                                        {impactLevel === 'high' ? 'Alta'    : impactLevel === 'medium' ? 'Media' : 'Baja'} Prioridad
-                                                    </span>
-                                                </div>
-                                                <p className="text-sm font-semibold mb-3 capitalize">
-                                                    {feature.feature.replace(/_/g, ' ')}: Factor {impactLevel === 'high' ? 'crítico' : impactLevel === 'medium' ? 'importante' : 'relevante'} detectado
-                                                </p>
-
-                                                <p className="text-xs opacity-70 mb-3 flex items-center gap-1">
-                                                    <Cpu className="w-3 h-3" />
-                                                    Análisis de {feature.categoria_feature}
-                                                </p>
-
-                                                <div className="flex items-center gap-3">
-                                                    <span className="text-xs opacity-80 flex items-center gap-1">
-                                                        <Target className="w-3 h-3" />
-                                                        Impacto IA:
-                                                    </span>
-                                                    <div className="flex-1 bg-white/50 rounded-full h-2">
-                                                        <div
-                                                            className="bg-blue-500 h-2 rounded-full transition-all duration-1000"
-                                                            style={{ width: `${feature.analisis_persona}%` }}
-                                                        />
-                                                    </div>
-                                                    <span className="text-xs font-bold">{feature.analisis_persona.toFixed(1)}%</span>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                );
-                            })}
-
-                        {(!analisis_features || analisis_features.filter(f => f.analisis_persona !== 0).length === 0) && (
-                            <div className="text-center py-8 text-gray-600">
-                                <div className="animate-pulse flex flex-col items-center gap-3">
-                                    <Brain className="w-12 h-12 text-blue-600" />
-                                    <p className="text-lg">Generando insights personalizados con IA...</p>
-                                    <div className="flex items-center gap-2 text-blue-600">
-                                        <Sparkles className="w-4 h-4 animate-spin" />
-                                        <span className="text-sm">Algoritmos procesando datos</span>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-                    </div>
-                </div> */}
-
+                
                 {/* Sidebar */}
                 <div className="space-y-6">
                     {/* Factores de Influencia con IA */}

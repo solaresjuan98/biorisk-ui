@@ -21,7 +21,7 @@ import {
     Loader2,
     Clock
 } from "lucide-react";
-import { SECTORES_ECONOMICOS, getProfesionesBySector } from '@/config';
+import { APP_ENVIRONMENT, SECTORES_ECONOMICOS, getProfesionesBySector } from '@/config';
 
 // Importar catálogos geográficos
 import { DEPARTAMENTOS, getMunicipiosByDepartamento } from '@/config';
@@ -911,7 +911,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                     )}
                                                 </div>
                                             </div>
-
+                                            
+                                            {hasMultipleCameras && APP_ENVIRONMENT === 'development' ? 'hay más camaras detectada': 'solo hay una camara detectada'}
                                             {/* Botón para cambiar cámara */}
                                             {isCameraOpen && (
                                                 <button

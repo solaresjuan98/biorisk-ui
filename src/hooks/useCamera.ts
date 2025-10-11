@@ -302,52 +302,53 @@ export const useCamera = () => {
                 fileInputRef.current?.click();
                 return;
             }
-
+    
             // NUEVO: Limpiar estado previo completamente
             await stopStreamSafely();
             resetValidation();
-
+    
+            // ✅ SOLUCIÓN: Verificar cámaras ANTES de abrir
             await checkMultipleCameras();
-
+    
             // CRÍTICO: Esperar más tiempo en móviles Samsung
             await new Promise(resolve => setTimeout(resolve, 200));
-
+    
+            // ✅ AHORA sí abrimos la cámara (esto actualiza el DOM)
             setIsCameraOpen(true);
-
-            // NUEVO: Esperar a que el DOM se actualice
+    
+            // ✅ Esperar a que el DOM se actualice y el estado se propague
             await new Promise(resolve => setTimeout(resolve, 300));
-
+    
             // NUEVO: Verificar que videoRef está montado
             if (!videoRef.current) {
                 console.error('❌ videoRef no disponible después de abrir cámara');
                 throw new Error('Video element no montado');
             }
-
+    
             const constraints = {
                 video: {
                     facingMode: { ideal: facingMode },
                     width: { ideal: 1280, max: 1920 },
                     height: { ideal: 720, max: 1080 },
-                    // NUEVO: Propiedades adicionales para Samsung
                     aspectRatio: { ideal: 16 / 9 },
                 },
                 audio: false,
             };
-
+    
             const stream = await startStreamSafely(constraints);
-
+    
             if (!stream) {
                 throw new Error('No se pudo obtener el stream');
             }
-
+    
             // Esperar más antes de iniciar captura automática
-            setTimeout(startAutomaticCapture, 1000); // Aumentado a 1 segundo
-
+            setTimeout(startAutomaticCapture, 1000);
+    
         } catch (error) {
             console.error('Error al abrir cámara:', error);
             setIsCameraOpen(false);
             await stopStreamSafely();
-
+    
             // Fallback a selección de archivo
             setTimeout(() => {
                 fileInputRef.current?.click();

@@ -705,23 +705,52 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                     preserveAspectRatio="xMidYMid slice"
                                                 >
                                                     <defs>
-                                                        {/* Definir máscara circular */}
-                                                        <mask id="circle-mask">
+                                                        {/* Máscara circular para móviles - Más grande */}
+                                                        <mask id="circle-mask-mobile">
+                                                            <rect width="100" height="100" fill="white" />
+                                                            <circle cx="50" cy="50" r="33" fill="black" />
+                                                        </mask>
+                                                        
+                                                        {/* Máscara circular para desktop - Tamaño original */}
+                                                        <mask id="circle-mask-desktop">
                                                             <rect width="100" height="100" fill="white" />
                                                             <circle cx="50" cy="50" r="24" fill="black" />
                                                         </mask>
                                                     </defs>
 
-                                                    {/* Fondo negro con máscara circular */}
+                                                    {/* Fondo negro con máscara circular - Móvil */}
                                                     <rect
                                                         width="100"
                                                         height="100"
                                                         fill="black"
                                                         fillOpacity="0.7"
-                                                        mask="url(#circle-mask)"
+                                                        mask="url(#circle-mask-mobile)"
+                                                        className="sm:hidden"
+                                                    />
+                                                    
+                                                    {/* Fondo negro con máscara circular - Desktop */}
+                                                    <rect
+                                                        width="100"
+                                                        height="100"
+                                                        fill="black"
+                                                        fillOpacity="0.7"
+                                                        mask="url(#circle-mask-desktop)"
+                                                        className="hidden sm:block"
                                                     />
 
-                                                    {/* Círculo guía principal */}
+                                                    {/* Círculo guía principal - Más grande en móviles */}
+                                                    <circle
+                                                        cx="50"
+                                                        cy="50"
+                                                        r="35"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1.2"
+                                                        strokeDasharray={getGuideState().strokeDasharray}
+                                                        className={`${getGuideState().className} sm:hidden`}
+                                                    />
+                                                    
+                                                    {/* Círculo guía para tablet y desktop */}
                                                     <circle
                                                         cx="50"
                                                         cy="50"
@@ -730,10 +759,24 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                         stroke={getGuideState().color}
                                                         strokeWidth="0.8"
                                                         strokeDasharray={getGuideState().strokeDasharray}
-                                                        className={getGuideState().className}
+                                                        className={`${getGuideState().className} hidden sm:block`}
                                                     />
 
-                                                    {/* Óvalo simulando rostro humano dentro del círculo */}
+                                                    {/* Óvalo simulando rostro humano - Móvil */}
+                                                    <ellipse
+                                                        cx="50"
+                                                        cy="52"
+                                                        rx="14"
+                                                        ry="18"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="0.7"
+                                                        strokeDasharray="2 2"
+                                                        opacity="0.6"
+                                                        className="sm:hidden"
+                                                    />
+                                                    
+                                                    {/* Óvalo simulando rostro humano - Desktop */}
                                                     <ellipse
                                                         cx="50"
                                                         cy="52"
@@ -744,42 +787,89 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                         strokeWidth="0.5"
                                                         strokeDasharray="2 2"
                                                         opacity="0.6"
+                                                        className="hidden sm:block"
                                                     />
 
-                                                    {/* Esquinas del marco - Superior Izquierda */}
+                                                    {/* Esquinas del marco móvil - Más grandes y separadas */}
+                                                    {/* Superior Izquierda - Móvil */}
+                                                    <path
+                                                        d="M 25 30 L 25 22 L 33 22"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1.5"
+                                                        strokeLinecap="round"
+                                                        className="sm:hidden"
+                                                    />
+
+                                                    {/* Superior Derecha - Móvil */}
+                                                    <path
+                                                        d="M 67 22 L 75 22 L 75 30"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1.5"
+                                                        strokeLinecap="round"
+                                                        className="sm:hidden"
+                                                    />
+
+                                                    {/* Inferior Izquierda - Móvil */}
+                                                    <path
+                                                        d="M 25 70 L 25 78 L 33 78"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1.5"
+                                                        strokeLinecap="round"
+                                                        className="sm:hidden"
+                                                    />
+
+                                                    {/* Inferior Derecha - Móvil */}
+                                                    <path
+                                                        d="M 67 78 L 75 78 L 75 70"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1.5"
+                                                        strokeLinecap="round"
+                                                        className="sm:hidden"
+                                                    />
+
+                                                    {/* Esquinas del marco desktop - Tamaño original */}
+                                                    {/* Superior Izquierda - Desktop */}
                                                     <path
                                                         d="M 34 38 L 34 32 L 40 32"
                                                         fill="none"
                                                         stroke={getGuideState().color}
                                                         strokeWidth="1"
                                                         strokeLinecap="round"
+                                                        className="hidden sm:block"
                                                     />
 
-                                                    {/* Esquina Superior Derecha */}
+                                                    {/* Superior Derecha - Desktop */}
                                                     <path
                                                         d="M 60 32 L 66 32 L 66 38"
                                                         fill="none"
                                                         stroke={getGuideState().color}
                                                         strokeWidth="1"
                                                         strokeLinecap="round"
+                                                        className="hidden sm:block"
                                                     />
 
-                                                    {/* Esquina Inferior Izquierda */}
+                                                    {/* Inferior Izquierda - Desktop */}
                                                     <path
                                                         d="M 34 62 L 34 68 L 40 68"
                                                         fill="none"
                                                         stroke={getGuideState().color}
                                                         strokeWidth="1"
                                                         strokeLinecap="round"
+                                                        className="hidden sm:block"
                                                     />
 
-                                                    {/* Esquina Inferior Derecha */}
+                                                    {/* Inferior Derecha - Desktop */}
                                                     <path
                                                         d="M 60 68 L 66 68 L 66 62"
                                                         fill="none"
                                                         stroke={getGuideState().color}
                                                         strokeWidth="1"
                                                         strokeLinecap="round"
+                                                        className="hidden sm:block"
                                                     />
                                                 </svg>
                                             </div>

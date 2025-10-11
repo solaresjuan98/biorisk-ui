@@ -112,18 +112,29 @@ const Prediction = () => {
 
     // *** FUNCIÓN MEJORADA PARA SCROLL TO TOP (OPTIMIZADA PARA MÓVILES) ***
     const scrollToTop = () => {
-        // Prevenir comportamiento por defecto en móviles
-        if (window.innerWidth <= 768) {
-            // Para móviles, usar método más directo
+
+        window.scrollTo({
+            top: 0,
+            behavior: window.innerWidth <= 768 ? 'auto' : 'smooth'
+        });
+
+        // Fallback adicional para navegadores móviles problemáticos
+        setTimeout(() => {
             document.documentElement.scrollTop = 0;
             document.body.scrollTop = 0;
-        } else {
-            // Para desktop, usar smooth scroll
-            window.scrollTo({
-                top: 0,
-                behavior: 'smooth'
-            });
-        }
+        }, 0);
+        // Prevenir comportamiento por defecto en móviles
+        // if (window.innerWidth <= 768) {
+        //     // Para móviles, usar método más directo
+        //     document.documentElement.scrollTop = 0;
+        //     document.body.scrollTop = 0;
+        // } else {
+        //     // Para desktop, usar smooth scroll
+        //     window.scrollTo({
+        //         top: 0,
+        //         behavior: 'smooth'
+        //     });
+        // }
     };
 
     const scrollToElement = (elementRef: React.RefObject<HTMLDivElement | null>, offset: number = -20) => {
@@ -462,11 +473,11 @@ const Prediction = () => {
                 // if(photoDataUrl) {
                 //     console.log('Info de la foto');
                 //     console.log('modo de la captura', photoMode);
-                    
+
                 // }
                 console.log('modo de la captura', photoMode);
 
-                
+
                 const response = await analyzeCui({
                     cui,
                     departamento,
@@ -484,7 +495,7 @@ const Prediction = () => {
                     setLoading(false);
                     setProcessingStep('');
                     console.log(response);
-                    
+
                     Swal.fire({
                         icon: 'error',
                         title: 'Error en el análisis',
@@ -504,7 +515,7 @@ const Prediction = () => {
                     setCameraBase64Photo(foto.processed_image_base64 || "");
                 }
                 console.log(datosDemo);
-                
+
                 if (datosDemo && Object.keys(datosDemo).length > 0) {
                     setResultados(datosDemo);
                     const insights = generateAIInsights(datosDemo);
@@ -531,7 +542,7 @@ const Prediction = () => {
                 }
 
             } catch (error) {
-                
+
                 console.error('Error en el análisis:', error);
                 alert('Error al procesar el análisis. Por favor intenta nuevamente.');
             } finally {

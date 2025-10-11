@@ -21,10 +21,12 @@ import {
     Loader2,
     Clock
 } from "lucide-react";
-import { APP_ENVIRONMENT, SECTORES_ECONOMICOS, getProfesionesBySector } from '@/config';
+import { SECTORES_ECONOMICOS, getProfesionesBySector } from '@/config';
 
 // Importar catálogos geográficos
 import { DEPARTAMENTOS, getMunicipiosByDepartamento } from '@/config';
+
+import { processImageFile as processImageWithOrientation } from '@/utils';
 
 // Definir las interfaces para los props (actualizadas para el nuevo sistema)
 interface ClientFormProps {
@@ -314,6 +316,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         setIsDragOver(false);
     };
 
+
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragOver(false);
@@ -322,20 +325,50 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         if (files.length > 0) {
             const file = files[0];
             if (file.type.startsWith('image/')) {
-                processImageFile(file);
+                processImageFile(file); // Ya usa la versión corregida
             }
         }
     };
 
+    // const handleDrop = (e: React.DragEvent) => {
+    //     e.preventDefault();
+    //     setIsDragOver(false);
+
+    //     const files = e.dataTransfer.files;
+    //     if (files.length > 0) {
+    //         const file = files[0];
+    //         if (file.type.startsWith('image/')) {
+    //             processImageFile(file);
+    //         }
+    //     }
+    // };
+
     // Procesar archivo de imagen
-    const processImageFile = (file: File) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const result = e.target?.result as string;
-            setPhotoDataUrl(result);
-        };
-        reader.readAsDataURL(file);
+    // const processImageFile = (file: File) => {
+    //     const reader = new FileReader();
+    //     reader.onload = (e) => {
+    //         const result = e.target?.result as string;
+    //         setPhotoDataUrl(result);
+    //     };
+    //     reader.readAsDataURL(file);
+    // };
+    const processImageFile = async (file: File) => {
+        try {
+            // Usar la utilidad que corrige la orientación automáticamente
+            const correctedDataUrl = await processImageWithOrientation(file);
+            setPhotoDataUrl(correctedDataUrl);
+        } catch (error) {
+            console.error('Error al procesar imagen:', error);
+            // Fallback: procesamiento sin corrección de orientación
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const result = e.target?.result as string;
+                setPhotoDataUrl(result);
+            };
+            reader.readAsDataURL(file);
+        }
     };
+
 
     // Manejar la selección de archivo desde el input
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -343,12 +376,23 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         if (files && files.length > 0) {
             const file = files[0];
             if (file.type.startsWith('image/')) {
-                processImageFile(file);
+                processImageFile(file); // Ya usa la versión corregida
             }
         }
-        // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
         e.target.value = '';
     };
+
+    // const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    //     const files = e.target.files;
+    //     if (files && files.length > 0) {
+    //         const file = files[0];
+    //         if (file.type.startsWith('image/')) {
+    //             processImageFile(file);
+    //         }
+    //     }
+    //     // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
+    //     e.target.value = '';
+    // };
 
     // Función para reiniciar validación
     const handleResetValidation = () => {
@@ -948,45 +992,50 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                             </div>
                         )}
 
-                        {photoDataUrl ? "existe" : "no existe"}
                         {/* Preview de foto (común para ambos modos) */}
                         {photoDataUrl && (
-                            <div className="mt-4 flex items-center justify-between gap-4 p-4 border rounded-xl bg-white shadow-sm">
-                                <div className="flex items-center gap-3">
-                                    <div className="relative">
-                                        <img
-                                            src={photoDataUrl}
-                                            alt="Foto capturada"
-                                            className="w-20 h-20 rounded-lg object-cover border-2 border-gray-200"
-                                        />
-                                        <div className="absolute -top-1 -right-1 w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                                            <CheckCircle className="w-4 h-4 text-white" />
+                            <div className="mt-4 border rounded-xl bg-white shadow-sm overflow-hidden">
+                                {/* Contenedor responsive */}
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4">
+                                    {/* Sección de imagen e información */}
+                                    <div className="flex items-center gap-4 flex-1">
+                                        <div className="relative flex-shrink-0">
+                                            <img
+                                                src={photoDataUrl}
+                                                alt="Foto capturada"
+                                                className="w-24 h-24 sm:w-20 sm:h-20 rounded-lg object-cover border-2 border-gray-200"
+                                            />
+                                            <div className="absolute -top-2 -right-2 w-7 h-7 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                                                <CheckCircle className="w-4 h-4 text-white" />
+                                            </div>
+                                        </div>
+                                        <div className="text-sm text-gray-700 flex-1 min-w-0">
+                                            <p className="font-semibold flex items-center gap-1.5 text-base mb-1">
+                                                <ImageIcon className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                                <span className="truncate">Imagen lista</span>
+                                            </p>
+                                            <p className="text-gray-500 text-sm">
+                                                {photoMode === 'camera' ?
+                                                    'Foto facial validada y capturada' :
+                                                    'Archivo subido correctamente'
+                                                }
+                                            </p>
                                         </div>
                                     </div>
-                                    <div className="text-sm text-gray-700">
-                                        <p className="font-semibold flex items-center gap-1">
-                                            <ImageIcon className="w-4 h-4 text-green-600" />
-                                            Imagen lista para enviar
-                                        </p>
-                                        <p className="text-gray-500">
-                                            {photoMode === 'camera' ?
-                                                'Foto facial validada y capturada' :
-                                                'Archivo subido correctamente'
-                                            }
-                                        </p>
-                                    </div>
+
+                                    {/* Botón de eliminar */}
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setPhotoDataUrl(null);
+                                            handleResetValidation();
+                                        }}
+                                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 transition-colors duration-200 w-full sm:w-auto font-medium"
+                                    >
+                                        <X className="w-4 h-4" />
+                                        Eliminar
+                                    </button>
                                 </div>
-                                <button
-                                    type="button"
-                                    onClick={() => {
-                                        setPhotoDataUrl(null);
-                                        handleResetValidation();
-                                    }}
-                                    className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 transition-colors duration-200"
-                                >
-                                    <X className="w-4 h-4" />
-                                    Eliminar
-                                </button>
                             </div>
                         )}
                     </div>

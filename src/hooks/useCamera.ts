@@ -11,9 +11,9 @@ export const useCamera = () => {
     const [isProcessingFrame, setIsProcessingFrame] = useState(false);
     const [isValidatingWithEndpoint, setIsValidatingWithEndpoint] = useState(false);
     const [validationAttempts, setValidationAttempts] = useState(0);
-    const [maxValidationAttempts] = useState(10); // Máximo 10 intentos
-    const [captureInterval] = useState(3000); // 3 segundos por defecto
-    const [photoFrozen, setPhotoFrozen] = useState(false); // Estado para congelar la foto
+    const [maxValidationAttempts] = useState(10);
+    const [captureInterval] = useState(3000);
+    const [photoFrozen, setPhotoFrozen] = useState(false);
 
     const videoRef = useRef<HTMLVideoElement | null>(null);
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
@@ -22,9 +22,11 @@ export const useCamera = () => {
     const fileInputRef = useRef<HTMLInputElement | null>(null);
     const isTogglingRef = useRef(false);
     const captureIntervalRef = useRef<NodeJS.Timeout | null>(null);
-    const endpointUrl = useRef('http://localhost:8000/api/validate-face'); // URL del endpoint
+    const endpointUrl = useRef('http://localhost:8000/api/validate-face');
+    
+    // Nuevo: ref para prevenir múltiples llamadas simultáneas
+    const streamInitializingRef = useRef(false);
 
-    // Detectar si hay múltiples cámaras disponibles
     const checkMultipleCameras = async () => {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
@@ -36,7 +38,6 @@ export const useCamera = () => {
         }
     };
 
-    // Función para capturar frame automáticamente
     const captureFrameForValidation = async () => {
         if (photoFrozen || !videoRef.current || !canvasRef.current || isProcessingFrame) return;
 
@@ -61,7 +62,6 @@ export const useCamera = () => {
         }
     };
 
-    // Función para validar rostro con endpoint externo
     const validateFaceWithEndpoint = async (imageDataUrl: string) => {
         if (photoFrozen || isValidatingWithEndpoint || validationAttempts >= maxValidationAttempts) return;
 
@@ -69,23 +69,18 @@ export const useCamera = () => {
         setValidationAttempts(prev => prev + 1);
 
         try {
-            // Enviar al endpoint
             const result = await getFaceValidation(imageDataUrl);
 
-            // Procesar respuesta del endpoint
             if (result.tiene_cara && result.num_caras > 0) {
-                // Rostro válido detectado
                 setFaceDetected(true);
                 setPhotoDataUrl(imageDataUrl);
-                setPhotoFrozen(true); // Congelar la foto
+                setPhotoFrozen(true);
 
-                // Detener el intervalo de captura
                 if (captureIntervalRef.current) {
                     clearInterval(captureIntervalRef.current);
                     captureIntervalRef.current = null;
                 }
 
-                // Guardar coordenadas del primer rostro detectado
                 if (result.coordenadas && result.coordenadas.length > 0) {
                     const coordenada = result.coordenadas[0];
                     setFacePosition({
@@ -98,12 +93,10 @@ export const useCamera = () => {
 
                 console.log('✅ Rostro válido detectado y guardado');
             } else {
-                // Rostro no válido o no detectado
                 setFaceDetected(false);
                 setFacePosition(null);
                 console.log(`❌ Intento ${validationAttempts}/${maxValidationAttempts}: ${result.error || 'Rostro no detectado'}`);
 
-                // Si se alcanzó el máximo de intentos
                 if (validationAttempts >= maxValidationAttempts) {
                     console.log('🔄 Máximo de intentos alcanzado. Deteniendo validación automática.');
                     stopAutomaticCapture();
@@ -114,7 +107,6 @@ export const useCamera = () => {
             setFaceDetected(false);
             setFacePosition(null);
 
-            // En caso de error, continuar intentando (a menos que sea un error crítico)
             if (validationAttempts >= maxValidationAttempts) {
                 stopAutomaticCapture();
             }
@@ -123,20 +115,15 @@ export const useCamera = () => {
         }
     };
 
-    // Iniciar captura automática
     const startAutomaticCapture = () => {
         if (captureIntervalRef.current || photoFrozen) return;
 
         console.log(`🎥 Iniciando captura automática cada ${captureInterval}ms`);
 
-        // Primera captura inmediata después de 1 segundo
         setTimeout(captureFrameForValidation, 1000);
-
-        // Luego capturar cada X segundos
         captureIntervalRef.current = setInterval(captureFrameForValidation, captureInterval);
     };
 
-    // Detener captura automática
     const stopAutomaticCapture = () => {
         if (captureIntervalRef.current) {
             clearInterval(captureIntervalRef.current);
@@ -145,15 +132,118 @@ export const useCamera = () => {
         }
     };
 
-    // Reiniciar validación (para permitir nueva captura)
     const resetValidation = () => {
         setFaceDetected(false);
         setFacePosition(null);
-        // setPhotoDataUrl(null);
         setValidationAttempts(0);
         setPhotoFrozen(false);
         setIsValidatingWithEndpoint(false);
         stopAutomaticCapture();
+    };
+
+    // FUNCIÓN MEJORADA: Detener stream de forma segura
+    const stopStreamSafely = async () => {
+        console.log('🛑 Deteniendo stream de forma segura...');
+        
+        // Detener captura automática primero
+        stopAutomaticCapture();
+        
+        // Pausar el video primero
+        if (videoRef.current) {
+            try {
+                videoRef.current.pause();
+                videoRef.current.srcObject = null;
+            } catch (error) {
+                console.warn('Error al pausar video:', error);
+            }
+        }
+        
+        // Esperar a que el video se detenga completamente
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Detener todas las pistas del stream
+        if (streamRef.current) {
+            try {
+                streamRef.current.getTracks().forEach((track) => {
+                    track.stop();
+                    console.log('✅ Track detenido:', track.kind);
+                });
+            } catch (error) {
+                console.warn('Error al detener tracks:', error);
+            }
+            streamRef.current = null;
+        }
+        
+        // Esperar un poco más para asegurar liberación de recursos
+        await new Promise(resolve => setTimeout(resolve, 200));
+    };
+
+    // FUNCIÓN MEJORADA: Iniciar stream de forma segura
+    const startStreamSafely = async (constraints: MediaStreamConstraints) => {
+        if (streamInitializingRef.current) {
+            console.warn('⚠️ Stream ya se está inicializando, esperando...');
+            return null;
+        }
+
+        streamInitializingRef.current = true;
+
+        try {
+            console.log('🎬 Iniciando stream con constraints:', constraints);
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+            
+            if (!videoRef.current) {
+                console.warn('⚠️ videoRef no disponible');
+                stream.getTracks().forEach(track => track.stop());
+                return null;
+            }
+
+            // Asignar el stream al video
+            videoRef.current.srcObject = stream;
+            streamRef.current = stream;
+
+            // Esperar a que los metadatos se carguen
+            await new Promise<void>((resolve, reject) => {
+                const video = videoRef.current;
+                if (!video) {
+                    reject(new Error('Video ref perdido'));
+                    return;
+                }
+
+                const handleLoadedMetadata = () => {
+                    console.log('✅ Metadatos cargados');
+                    video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    resolve();
+                };
+
+                const handleError = (error: Event) => {
+                    console.error('❌ Error al cargar metadatos:', error);
+                    video.removeEventListener('error', handleError);
+                    reject(error);
+                };
+
+                video.addEventListener('loadedmetadata', handleLoadedMetadata);
+                video.addEventListener('error', handleError);
+
+                // Timeout de seguridad
+                setTimeout(() => {
+                    video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    video.removeEventListener('error', handleError);
+                    reject(new Error('Timeout esperando metadatos'));
+                }, 5000);
+            });
+
+            // Reproducir el video
+            await videoRef.current.play();
+            console.log('▶️ Video reproduciéndose');
+
+            return stream;
+
+        } catch (error) {
+            console.error('❌ Error al iniciar stream:', error);
+            throw error;
+        } finally {
+            streamInitializingRef.current = false;
+        }
     };
 
     const openCamera = async () => {
@@ -163,9 +253,7 @@ export const useCamera = () => {
                 return;
             }
 
-            // Reiniciar estados
             resetValidation();
-
             await checkMultipleCameras();
             await new Promise(resolve => setTimeout(resolve, 50));
 
@@ -181,74 +269,61 @@ export const useCamera = () => {
                 audio: false,
             };
 
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            streamRef.current = stream;
-
-            if (videoRef.current) {
-                videoRef.current.srcObject = stream;
-                videoRef.current.onloadedmetadata = () => {
-                    videoRef.current?.play().then(() => {
-                        // Iniciar captura automática una vez que el video esté reproduciéndose
-                        setTimeout(startAutomaticCapture, 500);
-                    }).catch(err => {
-                        console.error('Error al reproducir video:', err);
-                    });
-                };
+            const stream = await startStreamSafely(constraints);
+            
+            if (stream) {
+                // Iniciar captura automática después de un delay
+                setTimeout(startAutomaticCapture, 500);
             }
+
         } catch (error) {
-            console.error(error);
+            console.error('Error al abrir cámara:', error);
             setIsCameraOpen(false);
             fileInputRef.current?.click();
         }
     };
 
-    const closeCamera = () => {
-        stopAutomaticCapture();
-        streamRef.current?.getTracks().forEach((t) => t.stop());
-        streamRef.current = null;
+    const closeCamera = async () => {
+        await stopStreamSafely();
         setIsCameraOpen(false);
         resetValidation();
         isTogglingRef.current = false;
     };
 
+    // FUNCIÓN MEJORADA: Toggle de cámara con mejor manejo para Samsung
     const toggleCamera = async () => {
-        if (!hasMultipleCameras || isTogglingRef.current) {
+        if (!hasMultipleCameras || isTogglingRef.current || streamInitializingRef.current) {
+            console.warn('⚠️ No se puede cambiar cámara en este momento');
             return;
         }
 
         isTogglingRef.current = true;
-        stopAutomaticCapture();
-
         const newMode = facingMode === 'user' ? 'environment' : 'user';
 
         try {
-            if (streamRef.current) {
-                streamRef.current.getTracks().forEach((track) => {
-                    track.stop();
-                });
-                streamRef.current = null;
-            }
+            console.log(`🔄 Cambiando de ${facingMode} a ${newMode}`);
+            
+            // Detener stream actual de forma segura
+            await stopStreamSafely();
+            
+            // Esperar un momento adicional para Samsung
+            await new Promise(resolve => setTimeout(resolve, 500));
 
-            if (videoRef.current) {
-                videoRef.current.srcObject = null;
-            }
-
-            await new Promise(resolve => setTimeout(resolve, 300));
-
+            // Probar diferentes estrategias de constraints
             const constraintStrategies = [
-                {
-                    video: {
-                        facingMode: { ideal: newMode },
-                        width: { ideal: 1280, max: 1920 },
-                        height: { ideal: 720, max: 1080 }
-                    },
-                    audio: false,
-                },
                 {
                     video: {
                         facingMode: { exact: newMode },
                         width: { ideal: 1280 },
                         height: { ideal: 720 }
+                    },
+                    audio: false,
+                },
+                {
+                    video: {
+                        facingMode: { ideal: newMode },
+                        width: { ideal: 1280, max: 1920 },
+                        height: { ideal: 720, max: 1080 }
                     },
                     audio: false,
                 },
@@ -264,37 +339,46 @@ export const useCamera = () => {
 
             for (let i = 0; i < constraintStrategies.length && !streamObtained; i++) {
                 try {
-                    const stream = await navigator.mediaDevices.getUserMedia(constraintStrategies[i]);
-                    streamRef.current = stream;
-
-                    if (videoRef.current) {
-                        videoRef.current.srcObject = stream;
-                        videoRef.current.onloadedmetadata = () => {
-                            videoRef.current?.play().then(() => {
-                                // Reiniciar validación y captura automática
-                                resetValidation();
-                                setTimeout(startAutomaticCapture, 500);
-                            }).catch(err => {
-                                console.error('Error al reproducir video:', err);
-                            });
-                        };
+                    console.log(`📋 Intentando estrategia ${i + 1}...`);
+                    
+                    const stream = await startStreamSafely(constraintStrategies[i]);
+                    
+                    if (stream) {
+                        setFacingMode(newMode);
+                        streamObtained = true;
+                        
+                        // Reiniciar validación y captura
+                        resetValidation();
+                        setTimeout(startAutomaticCapture, 500);
+                        
+                        console.log(`✅ Estrategia ${i + 1} exitosa`);
                     }
 
-                    setFacingMode(newMode);
-                    streamObtained = true;
-
                 } catch (strategyError) {
-                    console.log(`Estrategia ${i + 1} falló:`, strategyError);
+                    console.log(`❌ Estrategia ${i + 1} falló:`, strategyError);
+                    
+                    // Limpiar cualquier recurso parcial
+                    await stopStreamSafely();
+                    
                     if (i === constraintStrategies.length - 1) {
                         throw strategyError;
                     }
+                    
+                    // Esperar antes de la siguiente estrategia
+                    await new Promise(resolve => setTimeout(resolve, 300));
                 }
             }
 
         } catch (error) {
-            console.error('Error al cambiar cámara:', error);
+            console.error('❌ Error al cambiar cámara:', error);
 
             try {
+                // Intentar volver a la cámara original
+                console.log('🔙 Intentando volver a cámara original...');
+                
+                await stopStreamSafely();
+                await new Promise(resolve => setTimeout(resolve, 500));
+                
                 const fallbackConstraints = {
                     video: {
                         facingMode: { ideal: facingMode },
@@ -304,39 +388,30 @@ export const useCamera = () => {
                     audio: false,
                 };
 
-                const stream = await navigator.mediaDevices.getUserMedia(fallbackConstraints);
-                streamRef.current = stream;
-
-                if (videoRef.current) {
-                    videoRef.current.srcObject = stream;
-                    videoRef.current.onloadedmetadata = () => {
-                        videoRef.current?.play().then(() => {
-                            resetValidation();
-                            setTimeout(startAutomaticCapture, 500);
-                        }).catch(err => {
-                            console.error('Error al reproducir video:', err);
-                        });
-                    };
+                const stream = await startStreamSafely(fallbackConstraints);
+                
+                if (stream) {
+                    resetValidation();
+                    setTimeout(startAutomaticCapture, 500);
+                    console.log('✅ Recuperado a cámara original');
                 }
+                
             } catch (fallbackError) {
-                console.error('Error en fallback:', fallbackError);
-                closeCamera();
+                console.error('❌ Error en fallback:', fallbackError);
+                await closeCamera();
             }
         } finally {
             isTogglingRef.current = false;
         }
     };
 
-    // Función para captura manual (ahora guarda la foto si ya está validada)
     const capturePhoto = () => {
         if (!faceDetected || !photoDataUrl) {
             console.log('No hay rostro válido detectado para guardar');
             return;
         }
 
-        // La foto ya está guardada en photoDataUrl, solo cerramos la cámara
         console.log(photoDataUrl);
-        
         closeCamera();
     };
 
@@ -348,7 +423,6 @@ export const useCamera = () => {
         reader.readAsDataURL(file);
     };
 
-    // Configurar la URL del endpoint (función auxiliar)
     const setEndpointUrl = (url: string) => {
         endpointUrl.current = url;
     };
@@ -357,8 +431,11 @@ export const useCamera = () => {
         checkMultipleCameras();
 
         return () => {
+            // Cleanup al desmontar
             stopAutomaticCapture();
-            streamRef.current?.getTracks().forEach((t) => t.stop());
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach((t) => t.stop());
+            }
         };
     }, []);
 

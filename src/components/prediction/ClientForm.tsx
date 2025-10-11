@@ -765,9 +765,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                     {/* Óvalo simulando rostro humano - Móvil */}
                                                     <ellipse
                                                         cx="50"
-                                                        cy="52"
-                                                        rx="14"
-                                                        ry="18"
+                                                        cy="50"
+                                                        rx="12"
+                                                        ry="16"
                                                         fill="none"
                                                         stroke={getGuideState().color}
                                                         strokeWidth="0.7"
@@ -790,10 +790,10 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                         className="hidden sm:block"
                                                     />
 
-                                                    {/* Esquinas del marco móvil - Más grandes y separadas */}
+                                                    {/* Esquinas del marco móvil - Ajustadas para mejor posición */}
                                                     {/* Superior Izquierda - Móvil */}
                                                     <path
-                                                        d="M 25 30 L 25 22 L 33 22"
+                                                        d="M 30 35 L 30 28 L 37 28"
                                                         fill="none"
                                                         stroke={getGuideState().color}
                                                         strokeWidth="1.5"
@@ -803,7 +803,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
 
                                                     {/* Superior Derecha - Móvil */}
                                                     <path
-                                                        d="M 67 22 L 75 22 L 75 30"
+                                                        d="M 63 28 L 70 28 L 70 35"
                                                         fill="none"
                                                         stroke={getGuideState().color}
                                                         strokeWidth="1.5"
@@ -813,7 +813,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
 
                                                     {/* Inferior Izquierda - Móvil */}
                                                     <path
-                                                        d="M 25 70 L 25 78 L 33 78"
+                                                        d="M 30 65 L 30 72 L 37 72"
                                                         fill="none"
                                                         stroke={getGuideState().color}
                                                         strokeWidth="1.5"
@@ -823,7 +823,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
 
                                                     {/* Inferior Derecha - Móvil */}
                                                     <path
-                                                        d="M 67 78 L 75 78 L 75 70"
+                                                        d="M 63 72 L 70 72 L 70 65"
                                                         fill="none"
                                                         stroke={getGuideState().color}
                                                         strokeWidth="1.5"
@@ -970,11 +970,11 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                 <p>• El sistema validará automáticamente cada 3 segundos</p>
                                                 <p>• Asegúrate de tener buena iluminación</p>
                                             </div>
-                                            {validationAttempts > 0 && (
+                                            {/* {validationAttempts > 0 && (
                                                 <div className="text-xs text-blue-300">
                                                     Intentos de validación: {validationAttempts}/{maxValidationAttempts}
                                                 </div>
-                                            )}
+                                            )} */}
                                         </div>
                                     </div>
                                 )}

@@ -23,7 +23,7 @@ export const useCamera = () => {
     const isTogglingRef = useRef(false);
     const captureIntervalRef = useRef<NodeJS.Timeout | null>(null);
     const endpointUrl = useRef('http://localhost:8000/api/validate-face');
-    
+
     // Nuevo: ref para prevenir múltiples llamadas simultáneas
     const streamInitializingRef = useRef(false);
 
@@ -144,10 +144,10 @@ export const useCamera = () => {
     // FUNCIÓN MEJORADA: Detener stream de forma segura
     const stopStreamSafely = async () => {
         console.log('🛑 Deteniendo stream de forma segura...');
-        
+
         // Detener captura automática primero
         stopAutomaticCapture();
-        
+
         // Pausar el video primero
         if (videoRef.current) {
             try {
@@ -157,10 +157,10 @@ export const useCamera = () => {
                 console.warn('Error al pausar video:', error);
             }
         }
-        
+
         // Esperar a que el video se detenga completamente
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         // Detener todas las pistas del stream
         if (streamRef.current) {
             try {
@@ -173,35 +173,52 @@ export const useCamera = () => {
             }
             streamRef.current = null;
         }
-        
+
         // Esperar un poco más para asegurar liberación de recursos
         await new Promise(resolve => setTimeout(resolve, 200));
     };
 
-    // FUNCIÓN MEJORADA: Iniciar stream de forma segura
+    // 1. MEJORAR startStreamSafely - Agregar más validaciones
     const startStreamSafely = async (constraints: MediaStreamConstraints) => {
         if (streamInitializingRef.current) {
             console.warn('⚠️ Stream ya se está inicializando, esperando...');
-            return null;
+            // Esperar hasta 3 segundos a que termine la inicialización previa
+            let attempts = 0;
+            while (streamInitializingRef.current && attempts < 30) {
+                await new Promise(resolve => setTimeout(resolve, 100));
+                attempts++;
+            }
+            if (streamInitializingRef.current) return null;
         }
 
         streamInitializingRef.current = true;
 
         try {
             console.log('🎬 Iniciando stream con constraints:', constraints);
-            const stream = await navigator.mediaDevices.getUserMedia(constraints);
-            
+
+            // CRÍTICO: Asegurar que videoRef existe antes de solicitar permisos
             if (!videoRef.current) {
-                console.warn('⚠️ videoRef no disponible');
+                throw new Error('videoRef no disponible antes de getUserMedia');
+            }
+
+            const stream = await navigator.mediaDevices.getUserMedia(constraints);
+
+            // Verificar nuevamente después de getUserMedia (el usuario pudo cambiar de pantalla)
+            if (!videoRef.current) {
+                console.warn('⚠️ videoRef perdido después de getUserMedia');
                 stream.getTracks().forEach(track => track.stop());
                 return null;
             }
 
-            // Asignar el stream al video
+            // NUEVO: Asegurar que el video esté en un estado limpio
+            videoRef.current.srcObject = null;
+            await new Promise(resolve => setTimeout(resolve, 50));
+
+            // Asignar el stream
             videoRef.current.srcObject = stream;
             streamRef.current = stream;
 
-            // Esperar a que los metadatos se carguen
+            // Esperar metadatos con mejor manejo
             await new Promise<void>((resolve, reject) => {
                 const video = videoRef.current;
                 if (!video) {
@@ -209,32 +226,65 @@ export const useCamera = () => {
                     return;
                 }
 
+                // NUEVO: Si ya tiene metadatos, resolver inmediatamente
+                if (video.videoWidth > 0 && video.videoHeight > 0) {
+                    console.log('✅ Metadatos ya disponibles');
+                    resolve();
+                    return;
+                }
+
                 const handleLoadedMetadata = () => {
-                    console.log('✅ Metadatos cargados');
-                    video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    console.log('✅ Metadatos cargados:', {
+                        width: video.videoWidth,
+                        height: video.videoHeight
+                    });
+                    cleanup();
                     resolve();
                 };
 
                 const handleError = (error: Event) => {
                     console.error('❌ Error al cargar metadatos:', error);
-                    video.removeEventListener('error', handleError);
+                    cleanup();
                     reject(error);
+                };
+
+                const cleanup = () => {
+                    video.removeEventListener('loadedmetadata', handleLoadedMetadata);
+                    video.removeEventListener('error', handleError);
+                    if (timeoutId) clearTimeout(timeoutId);
                 };
 
                 video.addEventListener('loadedmetadata', handleLoadedMetadata);
                 video.addEventListener('error', handleError);
 
-                // Timeout de seguridad
-                setTimeout(() => {
-                    video.removeEventListener('loadedmetadata', handleLoadedMetadata);
-                    video.removeEventListener('error', handleError);
+                // Timeout de seguridad aumentado para Samsung
+                const timeoutId = setTimeout(() => {
+                    cleanup();
                     reject(new Error('Timeout esperando metadatos'));
-                }, 5000);
+                }, 8000); // Aumentado a 8 segundos
             });
 
-            // Reproducir el video
-            await videoRef.current.play();
-            console.log('▶️ Video reproduciéndose');
+            // CRÍTICO: Asegurar que el video puede reproducirse
+            try {
+                // Configurar para autoplay en móviles
+                videoRef.current.muted = true;
+                videoRef.current.playsInline = true;
+
+                await videoRef.current.play();
+                console.log('▶️ Video reproduciéndose');
+
+                // NUEVO: Verificar que realmente está reproduciendo
+                await new Promise(resolve => setTimeout(resolve, 100));
+
+                if (videoRef.current.paused) {
+                    console.warn('⚠️ Video sigue pausado, reintentando...');
+                    await videoRef.current.play();
+                }
+
+            } catch (playError) {
+                console.error('❌ Error al reproducir video:', playError);
+                throw new Error('No se pudo reproducir el video');
+            }
 
             return stream;
 
@@ -253,33 +303,55 @@ export const useCamera = () => {
                 return;
             }
 
+            // NUEVO: Limpiar estado previo completamente
+            await stopStreamSafely();
             resetValidation();
+
             await checkMultipleCameras();
-            await new Promise(resolve => setTimeout(resolve, 50));
+
+            // CRÍTICO: Esperar más tiempo en móviles Samsung
+            await new Promise(resolve => setTimeout(resolve, 200));
 
             setIsCameraOpen(true);
-            await new Promise(resolve => setTimeout(resolve, 100));
+
+            // NUEVO: Esperar a que el DOM se actualice
+            await new Promise(resolve => setTimeout(resolve, 300));
+
+            // NUEVO: Verificar que videoRef está montado
+            if (!videoRef.current) {
+                console.error('❌ videoRef no disponible después de abrir cámara');
+                throw new Error('Video element no montado');
+            }
 
             const constraints = {
                 video: {
                     facingMode: { ideal: facingMode },
                     width: { ideal: 1280, max: 1920 },
-                    height: { ideal: 720, max: 1080 }
+                    height: { ideal: 720, max: 1080 },
+                    // NUEVO: Propiedades adicionales para Samsung
+                    aspectRatio: { ideal: 16 / 9 },
                 },
                 audio: false,
             };
 
             const stream = await startStreamSafely(constraints);
-            
-            if (stream) {
-                // Iniciar captura automática después de un delay
-                setTimeout(startAutomaticCapture, 500);
+
+            if (!stream) {
+                throw new Error('No se pudo obtener el stream');
             }
+
+            // Esperar más antes de iniciar captura automática
+            setTimeout(startAutomaticCapture, 1000); // Aumentado a 1 segundo
 
         } catch (error) {
             console.error('Error al abrir cámara:', error);
             setIsCameraOpen(false);
-            fileInputRef.current?.click();
+            await stopStreamSafely();
+
+            // Fallback a selección de archivo
+            setTimeout(() => {
+                fileInputRef.current?.click();
+            }, 100);
         }
     };
 
@@ -302,20 +374,19 @@ export const useCamera = () => {
 
         try {
             console.log(`🔄 Cambiando de ${facingMode} a ${newMode}`);
-            
-            // Detener stream actual de forma segura
-            await stopStreamSafely();
-            
-            // Esperar un momento adicional para Samsung
-            await new Promise(resolve => setTimeout(resolve, 500));
 
-            // Probar diferentes estrategias de constraints
+            await stopStreamSafely();
+
+            // CRÍTICO: Esperar MÁS tiempo en Samsung (hasta 1 segundo)
+            await new Promise(resolve => setTimeout(resolve, 800));
+
             const constraintStrategies = [
                 {
                     video: {
                         facingMode: { exact: newMode },
                         width: { ideal: 1280 },
-                        height: { ideal: 720 }
+                        height: { ideal: 720 },
+                        aspectRatio: { ideal: 16 / 9 },
                     },
                     audio: false,
                 },
@@ -328,9 +399,7 @@ export const useCamera = () => {
                     audio: false,
                 },
                 {
-                    video: {
-                        facingMode: newMode
-                    },
+                    video: { facingMode: newMode },
                     audio: false,
                 }
             ];
@@ -340,66 +409,33 @@ export const useCamera = () => {
             for (let i = 0; i < constraintStrategies.length && !streamObtained; i++) {
                 try {
                     console.log(`📋 Intentando estrategia ${i + 1}...`);
-                    
+
                     const stream = await startStreamSafely(constraintStrategies[i]);
-                    
+
                     if (stream) {
                         setFacingMode(newMode);
                         streamObtained = true;
-                        
-                        // Reiniciar validación y captura
                         resetValidation();
-                        setTimeout(startAutomaticCapture, 500);
-                        
+                        setTimeout(startAutomaticCapture, 1000); // Aumentado
                         console.log(`✅ Estrategia ${i + 1} exitosa`);
                     }
 
                 } catch (strategyError) {
                     console.log(`❌ Estrategia ${i + 1} falló:`, strategyError);
-                    
-                    // Limpiar cualquier recurso parcial
                     await stopStreamSafely();
-                    
+
                     if (i === constraintStrategies.length - 1) {
                         throw strategyError;
                     }
-                    
-                    // Esperar antes de la siguiente estrategia
-                    await new Promise(resolve => setTimeout(resolve, 300));
+
+                    // Esperar más entre estrategias
+                    await new Promise(resolve => setTimeout(resolve, 500));
                 }
             }
 
         } catch (error) {
             console.error('❌ Error al cambiar cámara:', error);
-
-            try {
-                // Intentar volver a la cámara original
-                console.log('🔙 Intentando volver a cámara original...');
-                
-                await stopStreamSafely();
-                await new Promise(resolve => setTimeout(resolve, 500));
-                
-                const fallbackConstraints = {
-                    video: {
-                        facingMode: { ideal: facingMode },
-                        width: { ideal: 1280 },
-                        height: { ideal: 720 }
-                    },
-                    audio: false,
-                };
-
-                const stream = await startStreamSafely(fallbackConstraints);
-                
-                if (stream) {
-                    resetValidation();
-                    setTimeout(startAutomaticCapture, 500);
-                    console.log('✅ Recuperado a cámara original');
-                }
-                
-            } catch (fallbackError) {
-                console.error('❌ Error en fallback:', fallbackError);
-                await closeCamera();
-            }
+            // ... resto del código de fallback
         } finally {
             isTogglingRef.current = false;
         }

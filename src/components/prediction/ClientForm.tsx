@@ -745,6 +745,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                 autoPlay
                                                 playsInline
                                                 muted
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             />
 
                                             {/* Overlay con círculo guía, óvalo facial y esquinas de marco */}
@@ -836,34 +837,57 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                             </div>
 
                                             {/* Instrucciones en pantalla */}
-                                            <div className="absolute top-4 left-4 right-4">
-                                                <div className={`px-4 py-2 rounded-lg backdrop-blur-md text-sm font-medium text-center ${photoFrozen && faceDetected
-                                                    ? 'bg-green-600/80 text-white'
+                                            <div className="absolute top-4 left-4 right-20 flex justify-center px-2 sm:px-0">
+                                                <div className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-full backdrop-blur-md shadow-lg text-xs sm:text-sm font-medium transition-all duration-300 ${photoFrozen && faceDetected
+                                                    ? 'bg-green-500/90 text-white border border-green-400/50 shadow-green-500/20'
                                                     : isValidatingWithEndpoint
-                                                        ? 'bg-blue-600/80 text-white'
-                                                        : 'bg-orange-600/80 text-white'
+                                                        ? 'bg-blue-500/90 text-white border border-blue-400/50 shadow-blue-500/20'
+                                                        : 'bg-orange-500/90 text-white border border-orange-400/50 shadow-orange-500/20'
                                                     }`}>
                                                     {photoFrozen && faceDetected ? (
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <CheckCircle className="w-4 h-4" />
-                                                            Rostro válido detectado - Listo para guardar
-                                                        </div>
+                                                        <>
+                                                            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                                            <span className="leading-tight whitespace-nowrap">
+                                                                Rostro válido
+                                                                <span className="hidden sm:inline"> - Listo</span>
+                                                            </span>
+                                                        </>
                                                     ) : isValidatingWithEndpoint ? (
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <Loader2 className="w-4 h-4 animate-spin" />
-                                                            Validando rostro... ({validationAttempts}/{maxValidationAttempts})
-                                                        </div>
+                                                        <>
+                                                            <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin flex-shrink-0" />
+                                                            <span className="leading-tight whitespace-nowrap">
+                                                                Validando
+                                                                <span className="hidden xs:inline"> ({validationAttempts}/{maxValidationAttempts})</span>
+                                                            </span>
+                                                        </>
                                                     ) : (
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            <Clock className="w-4 h-4" />
-                                                            Coloca tu rostro dentro del círculo
-                                                        </div>
+                                                        <>
+                                                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                                            <span className="leading-tight whitespace-nowrap">
+                                                                <span className="hidden sm:inline">Centra tu rostro</span>
+                                                                <span className="sm:hidden">Centra rostro</span>
+                                                            </span>
+                                                        </>
                                                     )}
                                                 </div>
                                             </div>
-
                                             {/* Botón para cambiar cámara */}
                                             {hasMultipleCameras && (
+                                                <button
+                                                    type="button"
+                                                    onClick={toggleCamera}
+                                                    disabled={isValidatingWithEndpoint}
+                                                    className={`absolute top-4 right-4 p-2.5 sm:p-3 backdrop-blur-md rounded-full transition-all duration-200 shadow-lg ${isValidatingWithEndpoint
+                                                        ? 'bg-gray-500/20 cursor-not-allowed'
+                                                        : 'bg-white/30 hover:bg-white/40 cursor-pointer hover:scale-105'
+                                                        }`}
+                                                    title={facingMode === 'user' ? 'Cambiar a cámara trasera' : 'Cambiar a cámara frontal'}
+                                                >
+                                                    <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 text-white ${isValidatingWithEndpoint ? 'opacity-50' : ''}`} />
+                                                </button>
+                                            )}
+                                            {/* Botón para cambiar cámara */}
+                                            {/* {hasMultipleCameras && (
                                                 <button
                                                     type="button"
                                                     onClick={toggleCamera}
@@ -876,7 +900,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                 >
                                                     <RefreshCw className={`w-5 h-5 text-white ${isValidatingWithEndpoint ? 'opacity-50' : ''}`} />
                                                 </button>
-                                            )}
+                                            )} */}
 
                                             {/* Indicador de cámara activa */}
                                             <div className="absolute bottom-4 left-4 px-3 py-1 bg-blue-600/80 backdrop-blur-md rounded-full">

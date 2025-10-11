@@ -139,20 +139,20 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         <div className="relative" ref={dropdownRef}>
             <div
                 onClick={() => !disabled && setIsOpen(!isOpen)}
-                className={`w-full px-4 py-3 bg-white border border-gray-300 rounded-xl flex items-center justify-between cursor-pointer transition-all ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'hover:border-blue-400'
+                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-300 rounded-lg sm:rounded-xl flex items-center justify-between cursor-pointer transition-all ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'hover:border-blue-400'
                     } ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
             >
-                <div className="flex items-center gap-2 flex-1">
-                    {icon && <span className="text-gray-600">{icon}</span>}
-                    <span className={value ? 'text-gray-900' : 'text-gray-500'}>
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-1">
+                    {icon && <span className="text-gray-600 text-sm sm:text-base">{icon}</span>}
+                    <span className={`text-sm sm:text-base ${value ? 'text-gray-900' : 'text-gray-500'}`}>
                         {selectedOption ? selectedOption.label : placeholder}
                     </span>
                 </div>
-                <ChevronDown className={`w-5 h-5 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
+                <ChevronDown className={`w-4 h-4 sm:w-5 sm:h-5 text-gray-600 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
             </div>
 
             {isOpen && !disabled && (
-                <div className="absolute z-50 w-full mt-2 bg-white border border-gray-200 rounded-xl shadow-lg max-h-64 overflow-hidden">
+                <div className="absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg max-h-56 sm:max-h-64 overflow-hidden">
                     <div className="p-2 border-b border-gray-200">
                         <input
                             ref={inputRef}
@@ -160,17 +160,17 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                             value={searchTerm}
                             onChange={(e) => setSearchTerm(e.target.value)}
                             placeholder="Buscar..."
-                            className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900"
+                            className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm sm:text-base"
                             onClick={(e) => e.stopPropagation()}
                         />
                     </div>
-                    <div className="overflow-y-auto max-h-48">
+                    <div className="overflow-y-auto max-h-40 sm:max-h-48">
                         {filteredOptions.length > 0 ? (
                             filteredOptions.map((option) => (
                                 <div
                                     key={option.value}
                                     onClick={() => handleSelect(option.value)}
-                                    className={`px-4 py-3 cursor-pointer transition-colors ${option.value === value
+                                    className={`px-3 sm:px-4 py-2.5 sm:py-3 cursor-pointer transition-colors text-sm sm:text-base ${option.value === value
                                         ? 'bg-green-50 text-gray-900 font-medium'
                                         : 'hover:bg-gray-50 text-gray-700'
                                         }`}
@@ -179,7 +179,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                 </div>
                             ))
                         ) : (
-                            <div className="px-4 py-3 text-gray-500 text-center">
+                            <div className="px-3 sm:px-4 py-2.5 sm:py-3 text-gray-500 text-center text-sm sm:text-base">
                                 No se encontraron resultados
                             </div>
                         )}
@@ -316,7 +316,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         setIsDragOver(false);
     };
 
-
     const handleDrop = (e: React.DragEvent) => {
         e.preventDefault();
         setIsDragOver(false);
@@ -325,33 +324,12 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         if (files.length > 0) {
             const file = files[0];
             if (file.type.startsWith('image/')) {
-                processImageFile(file); // Ya usa la versión corregida
+                processImageFile(file);
             }
         }
     };
 
-    // const handleDrop = (e: React.DragEvent) => {
-    //     e.preventDefault();
-    //     setIsDragOver(false);
-
-    //     const files = e.dataTransfer.files;
-    //     if (files.length > 0) {
-    //         const file = files[0];
-    //         if (file.type.startsWith('image/')) {
-    //             processImageFile(file);
-    //         }
-    //     }
-    // };
-
     // Procesar archivo de imagen
-    // const processImageFile = (file: File) => {
-    //     const reader = new FileReader();
-    //     reader.onload = (e) => {
-    //         const result = e.target?.result as string;
-    //         setPhotoDataUrl(result);
-    //     };
-    //     reader.readAsDataURL(file);
-    // };
     const processImageFile = async (file: File) => {
         try {
             // Usar la utilidad que corrige la orientación automáticamente
@@ -369,30 +347,17 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         }
     };
 
-
     // Manejar la selección de archivo desde el input
     const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
         const files = e.target.files;
         if (files && files.length > 0) {
             const file = files[0];
             if (file.type.startsWith('image/')) {
-                processImageFile(file); // Ya usa la versión corregida
+                processImageFile(file);
             }
         }
         e.target.value = '';
     };
-
-    // const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
-    //     const files = e.target.files;
-    //     if (files && files.length > 0) {
-    //         const file = files[0];
-    //         if (file.type.startsWith('image/')) {
-    //             processImageFile(file);
-    //         }
-    //     }
-    //     // Limpiar el input para permitir seleccionar el mismo archivo de nuevo
-    //     e.target.value = '';
-    // };
 
     // Función para reiniciar validación
     const handleResetValidation = () => {
@@ -467,25 +432,25 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     };
 
     return (
-        <div className="bg-white/95 backdrop-blur-lg rounded-2xl shadow-2xl border border-white/30 p-8">
+        <div className="bg-white/95 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl border border-white/30 p-4 sm:p-6 lg:p-8">
             {!loading && (
-                <div className="space-y-6" ref={processingRef}>
+                <div className="space-y-4 sm:space-y-6" ref={processingRef}>
                     {/* Sección 1: Identificación */}
-                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-xl p-4 md:p-6 border border-blue-100">
-                        <div className="flex items-center gap-2 mb-4">
-                            <User className="w-5 h-5 text-blue-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">Identificación</h3>
+                    <div className="bg-gradient-to-r from-blue-50 to-indigo-50 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 border border-blue-100">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                            <User className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Identificación</h3>
                         </div>
 
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4">
                             {/* CUI */}
                             <div className="lg:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                                     CUI (Código Único de Identificación) *
                                 </label>
                                 <div className="relative">
-                                    <div className="absolute left-4 top-1/2 transform -translate-y-1/2">
-                                        <Bot className="w-5 h-5 text-blue-600" />
+                                    <div className="absolute left-3 sm:left-4 top-1/2 transform -translate-y-1/2">
+                                        <Bot className="w-4 h-4 sm:w-5 sm:h-5 text-blue-600" />
                                     </div>
                                     <input
                                         type="text"
@@ -494,7 +459,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                         onChange={(e) => {
                                             const value = e.target.value.replace(/\D/g, '').slice(0, 13);
                                             setCui(value);
-                                            if (cuiError) setCuiError(''); // Limpiar error al escribir
+                                            if (cuiError) setCuiError('');
                                         }}
                                         onBlur={(e) => {
                                             const value = e.target.value.trim();
@@ -505,8 +470,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                             }
                                         }}
                                         placeholder="Ingresa el CUI para análisis..."
-                                        className={`w-full pl-12 pr-4 py-3 bg-white border ${cuiError ? 'border-red-500' : 'border-gray-300'
-                                            } rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900`}
+                                        className={`w-full pl-10 sm:pl-12 pr-3 sm:pr-4 py-2.5 sm:py-3 bg-white border ${cuiError ? 'border-red-500' : 'border-gray-300'
+                                            } rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm sm:text-base`}
                                         onKeyPress={(e) => e.key === 'Enter' && isFormValid() && !cuiError && handleBuscar()}
                                         autoComplete="off"
                                         data-1p-ignore="true"
@@ -515,14 +480,14 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                         maxLength={13}
                                     />
                                     {cuiError && (
-                                        <p className="mt-1 text-sm text-red-600">{cuiError}</p>
+                                        <p className="mt-1 text-xs sm:text-sm text-red-600">{cuiError}</p>
                                     )}
                                 </div>
                             </div>
 
                             {/* Departamento */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                                     Departamento *
                                 </label>
                                 <CustomSelect
@@ -530,13 +495,13 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                     onChange={handleDepartamentoChange}
                                     options={departamentosOptions}
                                     placeholder="Selecciona un departamento"
-                                    icon={<MapPin className="w-4 h-4" />}
+                                    icon={<MapPin className="w-3 h-3 sm:w-4 sm:h-4" />}
                                 />
                             </div>
 
                             {/* Municipio */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                                     Municipio *
                                 </label>
                                 <CustomSelect
@@ -545,14 +510,14 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                     options={municipiosOptions}
                                     placeholder={departamento ? "Selecciona un municipio" : "Selecciona primero un departamento"}
                                     disabled={!departamento}
-                                    icon={<MapPin className="w-4 h-4" />}
+                                    icon={<MapPin className="w-3 h-3 sm:w-4 sm:h-4" />}
                                 />
                             </div>
 
                             {/* Edad */}
                             <div className="lg:col-span-2">
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <Calendar className="w-4 h-4 inline mr-1" />
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                                    <Calendar className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
                                     Edad *
                                 </label>
                                 <input
@@ -574,28 +539,28 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                             }
                                         }
                                     }
-                                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 text-sm sm:text-base"
                                 />
                             </div>
                             {
                                 edadError && (
-                                    <p className="mt-1 text-sm text-red-600 lg:col-span-2">{edadError}</p>
+                                    <p className="mt-1 text-xs sm:text-sm text-red-600 lg:col-span-2">{edadError}</p>
                                 )
                             }
                         </div>
                     </div>
 
                     {/* Sección 2: Información Laboral y Personal */}
-                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-xl p-4 md:p-6 border border-green-100">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Briefcase className="w-5 h-5 text-green-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">Información Laboral y Personal</h3>
+                    <div className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 border border-green-100">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                            <Briefcase className="w-4 h-4 sm:w-5 sm:h-5 text-green-600" />
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Información Laboral y Personal</h3>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Sector Económico - SELECT con diseño mejorado */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
+                            {/* Sector Económico */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                                     Sector Económico *
                                 </label>
                                 <CustomSelect
@@ -606,9 +571,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                 />
                             </div>
 
-                            {/* Profesión - SELECT con diseño mejorado */}
+                            {/* Profesión */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
                                     Profesión *
                                 </label>
                                 <CustomSelect
@@ -620,10 +585,10 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                 />
                             </div>
 
-                            {/* Estado Civil - SELECT con diseño mejorado */}
+                            {/* Estado Civil */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <Heart className="w-4 h-4 inline mr-1" />
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                                    <Heart className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
                                     Estado Civil *
                                 </label>
                                 <div className="relative">
@@ -631,7 +596,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                         name="estado_civil"
                                         value={estadoCivil}
                                         onChange={(e) => setEstadoCivil(e.target.value)}
-                                        className="w-full px-4 py-3 pr-10 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 appearance-none cursor-pointer"
+                                        className="w-full px-3 sm:px-4 py-2.5 sm:py-3 pr-8 sm:pr-10 bg-white border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 appearance-none cursor-pointer text-sm sm:text-base"
                                     >
                                         <option value="">Selecciona estado civil</option>
                                         <option value="Soltero">Soltero/a</option>
@@ -640,16 +605,16 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                         <option value="Viudo">Viudo/a</option>
                                         <option value="Union Libre">Unión Libre</option>
                                     </select>
-                                    <div className="absolute right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
-                                        <ChevronDown className="w-4 h-4 text-gray-400" />
+                                    <div className="absolute right-2 sm:right-3 top-1/2 transform -translate-y-1/2 pointer-events-none">
+                                        <ChevronDown className="w-3 h-3 sm:w-4 sm:h-4 text-gray-400" />
                                     </div>
                                 </div>
                             </div>
 
                             {/* Personas Dependientes */}
                             <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-2">
-                                    <Users className="w-4 h-4 inline mr-1" />
+                                <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-1.5 sm:mb-2">
+                                    <Users className="w-3 h-3 sm:w-4 sm:h-4 inline mr-1" />
                                     Personas que dependen del cliente *
                                 </label>
                                 <input
@@ -660,57 +625,41 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                     placeholder="Número de dependientes"
                                     min="0"
                                     max="20"
-                                    className="w-full px-4 py-3 bg-white border border-gray-300 rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900"
+                                    className="w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-300 rounded-lg sm:rounded-xl focus:ring-2 focus:ring-green-500 focus:border-green-500 text-gray-900 text-sm sm:text-base"
                                 />
                             </div>
                         </div>
                     </div>
 
-                    {/* Sección 3: Fotografía con detección facial mejorada por endpoint */}
-                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-xl p-4 md:p-6 border border-purple-100">
-                        <div className="flex items-center gap-2 mb-4">
-                            <Camera className="w-5 h-5 text-purple-600" />
-                            <h3 className="text-lg font-semibold text-gray-900">Fotografía Facial</h3>
+                    {/* Sección 3: Fotografía */}
+                    <div className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-lg sm:rounded-xl p-3 sm:p-4 md:p-6 border border-purple-100">
+                        <div className="flex items-center gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                            <Camera className="w-4 h-4 sm:w-5 sm:h-5 text-purple-600" />
+                            <h3 className="text-base sm:text-lg font-semibold text-gray-900">Fotografía Facial</h3>
                         </div>
 
-                        {/* Configuración del endpoint (para desarrollo) */}
-                        {/* {APP_ENVIRONMENT === 'development' && (
-                            <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                <label className="block text-sm font-medium text-blue-800 mb-2">
-                                    URL del Endpoint de Validación (Desarrollo)
-                                </label>
-                                <input
-                                    type="text"
-                                    value={endpointConfig}
-                                    onChange={(e) => setEndpointConfig(e.target.value)}
-                                    placeholder="http://localhost:8000/api/validate-face"
-                                    className="w-full px-3 py-2 border border-blue-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm"
-                                />
-                            </div>
-                        )} */}
-
                         {/* Pestañas para seleccionar modo de fotografía */}
-                        <div className="flex bg-gray-100 rounded-xl p-1 mb-4">
+                        <div className="flex bg-gray-100 rounded-lg sm:rounded-xl p-1 mb-3 sm:mb-4">
                             <button
                                 type="button"
                                 onClick={() => handlePhotoModeChange('camera')}
-                                className={`cursor-pointer flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${photoMode === 'camera'
+                                className={`cursor-pointer flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-md sm:rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 ${photoMode === 'camera'
                                     ? 'bg-white text-purple-700 shadow-sm'
                                     : 'text-gray-600 hover:text-gray-800'
                                     }`}
                             >
-                                <Camera className="w-4 h-4" />
+                                <Camera className="w-3 h-3 sm:w-4 sm:h-4" />
                                 Tomar Foto
                             </button>
                             <button
                                 type="button"
                                 onClick={() => handlePhotoModeChange('upload')}
-                                className={`cursor-pointer flex-1 px-4 py-3 rounded-lg font-medium text-sm transition-all duration-200 flex items-center justify-center gap-2 ${photoMode === 'upload'
+                                className={`cursor-pointer flex-1 px-3 sm:px-4 py-2 sm:py-3 rounded-md sm:rounded-lg font-medium text-xs sm:text-sm transition-all duration-200 flex items-center justify-center gap-1.5 sm:gap-2 ${photoMode === 'upload'
                                     ? 'bg-white text-purple-700 shadow-sm'
                                     : 'text-gray-600 hover:text-gray-800'
                                     }`}
                             >
-                                <Upload className="w-4 h-4" />
+                                <Upload className="w-3 h-3 sm:w-4 sm:h-4" />
                                 Subir Archivo
                             </button>
                         </div>
@@ -719,36 +668,35 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                         {photoMode === 'camera' && (
                             <div>
                                 {/* Botón para tomar foto */}
-                                <div className="mb-4">
+                                <div className="mb-3 sm:mb-4">
                                     <button
                                         type="button"
                                         onClick={openCamera}
                                         disabled={isCameraOpen}
-                                        className={`w-full px-4 py-3 border rounded-xl font-semibold flex items-center justify-center gap-2 transition-all duration-300 shadow-sm ${isCameraOpen
+                                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg sm:rounded-xl font-medium sm:font-semibold flex items-center justify-center gap-1.5 sm:gap-2 transition-all duration-300 shadow-sm text-sm sm:text-base ${isCameraOpen
                                             ? 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
                                             : 'bg-white border-gray-300 hover:border-purple-400 text-gray-900 cursor-pointer hover:shadow'
                                             }`}
                                     >
-                                        <Camera className="w-5 h-5" />
+                                        <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
                                         {isCameraOpen ? 'Cámara Activa' : 'Abrir Cámara para Selfie'}
                                     </button>
                                 </div>
 
                                 {/* Panel de cámara con detección facial por endpoint */}
                                 {isCameraOpen && (
-                                    <div className="p-4 border rounded-2xl bg-black/90 text-white">
-                                        <div className="relative rounded-xl overflow-hidden">
+                                    <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl bg-black/90 text-white">
+                                        <div className="relative rounded-lg sm:rounded-xl overflow-hidden">
                                             {/* Video de la cámara */}
                                             <video
                                                 ref={videoRef}
-                                                className="w-full max-h-[60vh] rounded-xl bg-black"
+                                                className="w-full max-h-[50vh] sm:max-h-[60vh] rounded-lg sm:rounded-xl bg-black"
                                                 autoPlay
                                                 playsInline
                                                 muted
                                                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                                             />
 
-                                            {/* Overlay con círculo guía, óvalo facial y esquinas de marco */}
                                             {/* Overlay con círculo guía, óvalo facial y esquinas de marco */}
                                             <div className="absolute inset-0 pointer-events-none">
                                                 <svg
@@ -837,8 +785,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                             </div>
 
                                             {/* Instrucciones en pantalla */}
-                                            <div className="absolute top-4 left-4 right-20 flex justify-center px-2 sm:px-0">
-                                                <div className={`inline-flex items-center gap-1.5 sm:gap-2 px-3 py-2 sm:px-4 sm:py-2.5 rounded-full backdrop-blur-md shadow-lg text-xs sm:text-sm font-medium transition-all duration-300 ${photoFrozen && faceDetected
+                                            <div className="absolute top-2 sm:top-4 left-1/2 transform -translate-x-1/2 z-10">
+                                                <div className={`inline-flex items-center gap-1 sm:gap-1.5 md:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded-full backdrop-blur-md shadow-lg text-xs sm:text-sm font-medium transition-all duration-300 ${photoFrozen && faceDetected
                                                     ? 'bg-green-500/90 text-white border border-green-400/50 shadow-green-500/20'
                                                     : isValidatingWithEndpoint
                                                         ? 'bg-blue-500/90 text-white border border-blue-400/50 shadow-blue-500/20'
@@ -846,23 +794,25 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                     }`}>
                                                     {photoFrozen && faceDetected ? (
                                                         <>
-                                                            <CheckCircle className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                                            <CheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
                                                             <span className="leading-tight whitespace-nowrap">
-                                                                Rostro válido
+                                                                <span className="hidden xs:inline">Rostro válido</span>
+                                                                <span className="xs:hidden">Válido</span>
                                                                 <span className="hidden sm:inline"> - Listo</span>
                                                             </span>
                                                         </>
                                                     ) : isValidatingWithEndpoint ? (
                                                         <>
-                                                            <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin flex-shrink-0" />
+                                                            <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 animate-spin flex-shrink-0" />
                                                             <span className="leading-tight whitespace-nowrap">
-                                                                Validando
-                                                                <span className="hidden xs:inline"> ({validationAttempts}/{maxValidationAttempts})</span>
+                                                                <span className="hidden xs:inline">Validando</span>
+                                                                <span className="xs:hidden">...</span>
+                                                                {/* <span className="hidden sm:inline"> ({validationAttempts}/{maxValidationAttempts})</span> */}
                                                             </span>
                                                         </>
                                                     ) : (
                                                         <>
-                                                            <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4 flex-shrink-0" />
+                                                            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
                                                             <span className="leading-tight whitespace-nowrap">
                                                                 <span className="hidden sm:inline">Centra tu rostro</span>
                                                                 <span className="sm:hidden">Centra rostro</span>
@@ -871,41 +821,27 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                     )}
                                                 </div>
                                             </div>
+                                            
                                             {/* Botón para cambiar cámara */}
                                             {hasMultipleCameras && (
                                                 <button
                                                     type="button"
                                                     onClick={toggleCamera}
                                                     disabled={isValidatingWithEndpoint}
-                                                    className={`absolute top-4 right-4 p-2.5 sm:p-3 backdrop-blur-md rounded-full transition-all duration-200 shadow-lg ${isValidatingWithEndpoint
+                                                    className={`absolute top-2 sm:top-4 right-2 sm:right-4 p-2 sm:p-2.5 md:p-3 backdrop-blur-md rounded-full transition-all duration-200 shadow-lg ${isValidatingWithEndpoint
                                                         ? 'bg-gray-500/20 cursor-not-allowed'
                                                         : 'bg-white/30 hover:bg-white/40 cursor-pointer hover:scale-105'
                                                         }`}
                                                     title={facingMode === 'user' ? 'Cambiar a cámara trasera' : 'Cambiar a cámara frontal'}
                                                 >
-                                                    <RefreshCw className={`w-4 h-4 sm:w-5 sm:h-5 text-white ${isValidatingWithEndpoint ? 'opacity-50' : ''}`} />
+                                                    <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white ${isValidatingWithEndpoint ? 'opacity-50' : ''}`} />
                                                 </button>
                                             )}
-                                            {/* Botón para cambiar cámara */}
-                                            {/* {hasMultipleCameras && (
-                                                <button
-                                                    type="button"
-                                                    onClick={toggleCamera}
-                                                    disabled={isValidatingWithEndpoint}
-                                                    className={`absolute top-4 right-4 p-3 backdrop-blur-md rounded-full transition-all duration-200 ${isValidatingWithEndpoint
-                                                        ? 'bg-gray-500/20 cursor-not-allowed'
-                                                        : 'bg-white/20 hover:bg-white/30 cursor-pointer'
-                                                        }`}
-                                                    title={facingMode === 'user' ? 'Cambiar a cámara trasera' : 'Cambiar a cámara frontal'}
-                                                >
-                                                    <RefreshCw className={`w-5 h-5 text-white ${isValidatingWithEndpoint ? 'opacity-50' : ''}`} />
-                                                </button>
-                                            )} */}
 
                                             {/* Indicador de cámara activa */}
-                                            <div className="absolute bottom-4 left-4 px-3 py-1 bg-blue-600/80 backdrop-blur-md rounded-full">
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-2 h-2 bg-blue-300 rounded-full animate-pulse"></div>
+                                            <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 px-2 sm:px-3 py-1 bg-blue-600/80 backdrop-blur-md rounded-full">
+                                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-300 rounded-full animate-pulse"></div>
                                                     <span className="text-xs font-medium">
                                                         {facingMode === 'user' ? 'Cámara frontal' : 'Cámara trasera'}
                                                     </span>
@@ -914,48 +850,32 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                         </div>
 
                                         {/* Controles de la cámara */}
-                                        <div className="flex items-center justify-center gap-3 mt-4">
+                                        <div className="flex items-center justify-center gap-2 sm:gap-3 mt-3 sm:mt-4">
                                             <button
                                                 type="button"
                                                 onClick={capturePhoto}
                                                 disabled={!faceDetected || !photoFrozen || isValidatingWithEndpoint}
-                                                className={`px-6 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 ${faceDetected && photoFrozen && !isValidatingWithEndpoint
+                                                className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-medium sm:font-semibold transition-all duration-200 flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base ${faceDetected && photoFrozen && !isValidatingWithEndpoint
                                                     ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
                                                     : 'bg-gray-600 text-gray-400 cursor-not-allowed'
                                                     }`}
                                             >
-                                                <Camera className="w-4 h-4" />
+                                                <Camera className="w-3 h-3 sm:w-4 sm:h-4" />
                                                 {getCaptureButtonText()}
                                             </button>
-
-                                            {/* Botón para reiniciar validación */}
-                                            {(validationAttempts > 0 && !photoFrozen) && (
-                                                <button
-                                                    type="button"
-                                                    onClick={handleResetValidation}
-                                                    disabled={isValidatingWithEndpoint}
-                                                    className={`px-4 py-3 rounded-xl font-semibold transition-all duration-200 flex items-center gap-2 ${isValidatingWithEndpoint
-                                                        ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
-                                                        : 'bg-yellow-600 hover:bg-yellow-700 text-white cursor-pointer'
-                                                        }`}
-                                                >
-                                                    <RefreshCw className="w-4 h-4" />
-                                                    Reintentar
-                                                </button>
-                                            )}
 
                                             <button
                                                 type="button"
                                                 onClick={closeCamera}
-                                                className="px-5 py-3 bg-gray-700 hover:bg-gray-600 rounded-xl font-semibold transition-colors"
+                                                className="px-3 sm:px-5 py-2.5 sm:py-3 bg-gray-700 hover:bg-gray-600 rounded-lg sm:rounded-xl font-medium sm:font-semibold transition-colors text-sm sm:text-base"
                                             >
                                                 Cancelar
                                             </button>
                                         </div>
 
                                         {/* Instrucciones adicionales y estadísticas */}
-                                        <div className="mt-3 text-center space-y-2">
-                                            <div className="text-sm text-gray-300">
+                                        <div className="mt-2 sm:mt-3 text-center space-y-1 sm:space-y-2">
+                                            <div className="text-xs sm:text-sm text-gray-300">
                                                 <p>• Mantén tu rostro centrado en el círculo</p>
                                                 <p>• El sistema validará automáticamente cada 3 segundos</p>
                                                 <p>• Asegúrate de tener buena iluminación</p>
@@ -979,22 +899,22 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                     onDragLeave={handleDragLeave}
                                     onDrop={handleDrop}
                                     onClick={() => uploadInputRef.current?.click()}
-                                    className={`w-full border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-all duration-300 ${isDragOver
+                                    className={`w-full border-2 border-dashed rounded-lg sm:rounded-xl p-4 sm:p-6 md:p-8 text-center cursor-pointer transition-all duration-300 ${isDragOver
                                         ? 'border-purple-500 bg-purple-50 scale-105'
                                         : 'border-gray-300 hover:border-purple-400 hover:bg-purple-50/50'
                                         }`}
                                 >
-                                    <div className="flex flex-col items-center gap-4">
-                                        <div className={`p-4 rounded-full transition-colors duration-300 ${isDragOver ? 'bg-purple-200' : 'bg-gray-100'
+                                    <div className="flex flex-col items-center gap-2 sm:gap-3 md:gap-4">
+                                        <div className={`p-2 sm:p-3 md:p-4 rounded-full transition-colors duration-300 ${isDragOver ? 'bg-purple-200' : 'bg-gray-100'
                                             }`}>
-                                            <FileImage className={`w-8 h-8 transition-colors duration-300 ${isDragOver ? 'text-purple-600' : 'text-gray-500'
+                                            <FileImage className={`w-6 h-6 sm:w-7 sm:h-7 md:w-8 md:h-8 transition-colors duration-300 ${isDragOver ? 'text-purple-600' : 'text-gray-500'
                                                 }`} />
                                         </div>
-                                        <div className="space-y-2">
-                                            <h4 className="text-lg font-semibold text-gray-900">
+                                        <div className="space-y-1 sm:space-y-2">
+                                            <h4 className="text-base sm:text-lg font-semibold text-gray-900">
                                                 {isDragOver ? '¡Suelta la imagen aquí!' : 'Subir imagen facial'}
                                             </h4>
-                                            <p className="text-sm text-gray-600">
+                                            <p className="text-xs sm:text-sm text-gray-600">
                                                 Arrastra y suelta una imagen o{' '}
                                                 <span className="text-purple-600 font-medium">haz clic para seleccionar</span>
                                             </p>
@@ -1018,27 +938,27 @@ export const ClientForm: React.FC<ClientFormProps> = ({
 
                         {/* Preview de foto (común para ambos modos) */}
                         {photoDataUrl && (
-                            <div className="mt-4 border rounded-xl bg-white shadow-sm overflow-hidden">
+                            <div className="mt-3 sm:mt-4 border rounded-lg sm:rounded-xl bg-white shadow-sm overflow-hidden">
                                 {/* Contenedor responsive */}
-                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 p-4">
+                                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 sm:gap-4 p-3 sm:p-4">
                                     {/* Sección de imagen e información */}
-                                    <div className="flex items-center gap-4 flex-1">
+                                    <div className="flex items-center gap-3 sm:gap-4 flex-1">
                                         <div className="relative flex-shrink-0">
                                             <img
                                                 src={photoDataUrl}
                                                 alt="Foto capturada"
-                                                className="w-24 h-24 sm:w-20 sm:h-20 rounded-lg object-cover border-2 border-gray-200"
+                                                className="w-16 h-16 sm:w-20 sm:h-20 md:w-24 md:h-24 rounded-lg object-cover border-2 border-gray-200"
                                             />
-                                            <div className="absolute -top-2 -right-2 w-7 h-7 bg-green-500 rounded-full flex items-center justify-center shadow-md">
-                                                <CheckCircle className="w-4 h-4 text-white" />
+                                            <div className="absolute -top-1 -right-1 sm:-top-2 sm:-right-2 w-5 h-5 sm:w-6 sm:h-6 md:w-7 md:h-7 bg-green-500 rounded-full flex items-center justify-center shadow-md">
+                                                <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-white" />
                                             </div>
                                         </div>
-                                        <div className="text-sm text-gray-700 flex-1 min-w-0">
-                                            <p className="font-semibold flex items-center gap-1.5 text-base mb-1">
-                                                <ImageIcon className="w-4 h-4 text-green-600 flex-shrink-0" />
+                                        <div className="text-xs sm:text-sm text-gray-700 flex-1 min-w-0">
+                                            <p className="font-semibold flex items-center gap-1 sm:gap-1.5 text-sm sm:text-base mb-1">
+                                                <ImageIcon className="w-3 h-3 sm:w-4 sm:h-4 text-green-600 flex-shrink-0" />
                                                 <span className="truncate">Imagen lista</span>
                                             </p>
-                                            <p className="text-gray-500 text-sm">
+                                            <p className="text-gray-500 text-xs sm:text-sm">
                                                 {photoMode === 'camera' ?
                                                     'Foto facial validada y capturada' :
                                                     'Archivo subido correctamente'
@@ -1054,9 +974,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                             setPhotoDataUrl(null);
                                             handleResetValidation();
                                         }}
-                                        className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 transition-colors duration-200 w-full sm:w-auto font-medium"
+                                        className="flex items-center justify-center gap-1.5 sm:gap-2 px-3 sm:px-4 py-2 sm:py-2.5 rounded-lg border border-red-200 text-red-700 hover:bg-red-50 transition-colors duration-200 w-full sm:w-auto font-medium text-xs sm:text-sm"
                                     >
-                                        <X className="w-4 h-4" />
+                                        <X className="w-3 h-3 sm:w-4 sm:h-4" />
                                         Eliminar
                                     </button>
                                 </div>
@@ -1065,35 +985,35 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                     </div>
 
                     {/* Información de campos obligatorios */}
-                    <div className="bg-yellow-50 border border-yellow-200 rounded-xl p-4">
-                        <div className="flex items-center gap-2 text-yellow-800">
-                            <Bot className="w-4 h-4" />
-                            <span className="text-sm font-medium">
+                    <div className="bg-yellow-50 border border-yellow-200 rounded-lg sm:rounded-xl p-3 sm:p-4">
+                        <div className="flex items-center gap-1.5 sm:gap-2 text-yellow-800">
+                            <Bot className="w-3 h-3 sm:w-4 sm:h-4" />
+                            <span className="text-xs sm:text-sm font-medium">
                                 Todos los campos marcados con (*) son obligatorios para el análisis de IA
                             </span>
                         </div>
                     </div>
 
                     {/* Botones de Análisis y Nueva Consulta */}
-                    <div className="flex flex-col sm:flex-row justify-center gap-3 pt-4">
+                    <div className="flex flex-col sm:flex-row justify-center gap-2 sm:gap-3 pt-3 sm:pt-4">
                         <button
                             onClick={handleBuscar}
                             disabled={loading || !isFormValid()}
-                            className="w-full sm:w-auto cursor-pointer px-8 py-4 bg-gradient-to-r from-blue-600 to-red-600 hover:from-blue-700 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed"
+                            className="w-full sm:w-auto cursor-pointer px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-blue-600 to-red-600 hover:from-blue-700 hover:to-red-700 disabled:from-gray-400 disabled:to-gray-500 text-white rounded-lg sm:rounded-xl font-medium sm:font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 shadow-lg hover:shadow-xl disabled:cursor-not-allowed text-sm sm:text-base"
                         >
                             {loading ? (
                                 <>
                                     <div className="relative">
-                                        <div className="animate-spin w-5 h-5 border-2 border-white border-t-transparent rounded-full"></div>
+                                        <div className="animate-spin w-4 h-4 sm:w-5 sm:h-5 border-2 border-white border-t-transparent rounded-full"></div>
                                         <div className="absolute inset-0 animate-pulse">
-                                            <Cpu className="w-5 h-5 text-white/50" />
+                                            <Cpu className="w-4 h-4 sm:w-5 sm:h-5 text-white/50" />
                                         </div>
                                     </div>
                                     Procesando IA...
                                 </>
                             ) : (
                                 <>
-                                    <Brain className="w-5 h-5" />
+                                    <Brain className="w-4 h-4 sm:w-5 sm:h-5" />
                                     Analizar con IA
                                 </>
                             )}
@@ -1103,9 +1023,9 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                         {hasResults && !loading && (
                             <button
                                 onClick={handleNuevaConsulta}
-                                className="w-full sm:w-auto cursor-pointer px-8 py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-xl font-semibold flex items-center justify-center gap-3 transition-all duration-300 shadow-lg hover:shadow-xl"
+                                className="w-full sm:w-auto cursor-pointer px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-green-600 to-emerald-600 hover:from-green-700 hover:to-emerald-700 text-white rounded-lg sm:rounded-xl font-medium sm:font-semibold flex items-center justify-center gap-2 sm:gap-3 transition-all duration-300 shadow-lg hover:shadow-xl text-sm sm:text-base"
                             >
-                                <User className="w-5 h-5" />
+                                <User className="w-4 h-4 sm:w-5 sm:h-5" />
                                 Nueva Consulta
                             </button>
                         )}
@@ -1115,33 +1035,33 @@ export const ClientForm: React.FC<ClientFormProps> = ({
 
             {/* Estado de procesamiento con IA */}
             {loading && (
-                <div className="mt-6 space-y-4">
-                    <div className="bg-white/95 backdrop-blur-lg rounded-xl p-6 border border-white/30">
-                        <div className="flex items-center gap-3 mb-4">
+                <div className="mt-4 sm:mt-6 space-y-3 sm:space-y-4">
+                    <div className="bg-white/95 backdrop-blur-lg rounded-lg sm:rounded-xl p-4 sm:p-6 border border-white/30">
+                        <div className="flex items-center gap-2 sm:gap-3 mb-3 sm:mb-4">
                             <div className="relative">
-                                <Activity className="w-6 h-6 text-blue-600 animate-pulse" />
-                                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full animate-ping"></div>
+                                <Activity className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 animate-pulse" />
+                                <div className="absolute -top-1 -right-1 w-2 h-2 sm:w-3 sm:h-3 bg-green-500 rounded-full animate-ping"></div>
                             </div>
-                            <h3 className="text-gray-900 font-semibold">Sistema de IA Procesando</h3>
+                            <h3 className="text-gray-900 font-medium sm:font-semibold text-sm sm:text-base">Sistema de IA Procesando</h3>
                         </div>
 
-                        <div className="space-y-3">
+                        <div className="space-y-2 sm:space-y-3">
                             {aiProcessingSteps.map((step, index) => (
-                                <div key={index} className="flex items-center gap-3 text-gray-700">
-                                    <CheckCircle className="w-4 h-4 text-green-600" />
-                                    <span className="text-sm">{step}</span>
+                                <div key={index} className="flex items-center gap-2 sm:gap-3 text-gray-700">
+                                    <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-600" />
+                                    <span className="text-xs sm:text-sm">{step}</span>
                                 </div>
                             ))}
 
                             {processingStep && (
-                                <div className="flex items-center gap-3 text-gray-900">
-                                    <div className="animate-spin w-4 h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                                    <span className="text-sm font-medium">{processingStep}</span>
+                                <div className="flex items-center gap-2 sm:gap-3 text-gray-900">
+                                    <div className="animate-spin w-3 h-3 sm:w-4 sm:h-4 border-2 border-blue-600 border-t-transparent rounded-full"></div>
+                                    <span className="text-xs sm:text-sm font-medium">{processingStep}</span>
                                 </div>
                             )}
                         </div>
 
-                        <div className="mt-4 bg-gray-200 rounded-lg h-2">
+                        <div className="mt-3 sm:mt-4 bg-gray-200 rounded-lg h-2">
                             <div
                                 className="bg-gradient-to-r from-blue-500 to-purple-500 h-2 rounded-lg transition-all duration-300"
                                 style={{ width: `${(currentStepIndex / processingSteps.length) * 100}%` }}
@@ -1165,4 +1085,4 @@ export const ClientForm: React.FC<ClientFormProps> = ({
             />
         </div>
     );
-};
+}

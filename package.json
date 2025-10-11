@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "build": "vite build",
     "predeploy": "npm run build && cp -f dist/index.html dist/404.html",
-    "deploy": "gh-pages -d dist"
+    "deploy": "gh-pages -d dist",
+    "deploy:full": "npm run predeploy && npm run deploy"
   },
   "dependencies": {
     "@radix-ui/react-slot": "^1.2.3",

@@ -710,7 +710,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                             <rect width="100" height="100" fill="white" />
                                                             <circle cx="50" cy="50" r="33" fill="black" />
                                                         </mask>
-                                                        
+
                                                         {/* Máscara circular para desktop - Tamaño original */}
                                                         <mask id="circle-mask-desktop">
                                                             <rect width="100" height="100" fill="white" />
@@ -727,7 +727,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                         mask="url(#circle-mask-mobile)"
                                                         className="sm:hidden"
                                                     />
-                                                    
+
                                                     {/* Fondo negro con máscara circular - Desktop */}
                                                     <rect
                                                         width="100"
@@ -749,7 +749,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                         strokeDasharray={getGuideState().strokeDasharray}
                                                         className={`${getGuideState().className} sm:hidden`}
                                                     />
-                                                    
+
                                                     {/* Círculo guía para tablet y desktop */}
                                                     <circle
                                                         cx="50"
@@ -775,7 +775,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                         opacity="0.6"
                                                         className="sm:hidden"
                                                     />
-                                                    
+
                                                     {/* Óvalo simulando rostro humano - Desktop */}
                                                     <ellipse
                                                         cx="50"
@@ -911,9 +911,30 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                     )}
                                                 </div>
                                             </div>
-                                            
+
                                             {/* Botón para cambiar cámara */}
-                                            {hasMultipleCameras && (
+                                            {isCameraOpen && (
+                                                <button
+                                                    type="button"
+                                                    onClick={toggleCamera}
+                                                    disabled={isValidatingWithEndpoint || !hasMultipleCameras}
+                                                    className={`absolute top-2 sm:top-4 right-2 sm:right-4 p-2 sm:p-2.5 md:p-3 backdrop-blur-md rounded-full transition-all duration-200 shadow-lg ${isValidatingWithEndpoint || !hasMultipleCameras
+                                                            ? 'bg-gray-500/20 cursor-not-allowed opacity-50'
+                                                            : 'bg-white/30 hover:bg-white/40 cursor-pointer hover:scale-105'
+                                                        }`}
+                                                    title={
+                                                        !hasMultipleCameras
+                                                            ? 'Solo hay una cámara disponible'
+                                                            : facingMode === 'user'
+                                                                ? 'Cambiar a cámara trasera'
+                                                                : 'Cambiar a cámara frontal'
+                                                    }
+                                                >
+                                                    <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white ${isValidatingWithEndpoint || !hasMultipleCameras ? 'opacity-50' : ''
+                                                        }`} />
+                                                </button>
+                                            )}
+                                            {/* {hasMultipleCameras && (
                                                 <button
                                                     type="button"
                                                     onClick={toggleCamera}
@@ -926,7 +947,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                 >
                                                     <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white ${isValidatingWithEndpoint ? 'opacity-50' : ''}`} />
                                                 </button>
-                                            )}
+                                            )} */}
 
                                             {/* Indicador de cámara activa */}
                                             <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 px-2 sm:px-3 py-1 bg-blue-600/80 backdrop-blur-md rounded-full">

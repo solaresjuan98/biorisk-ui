@@ -989,7 +989,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                         <div className="mt-2 sm:mt-3 text-center space-y-1 sm:space-y-2">
                                             <div className="text-xs sm:text-sm text-gray-300">
                                                 <p>• Mantén tu rostro centrado en el círculo</p>
-                                                <p>• El sistema validará automáticamente cada 3 segundos</p>
+                                                {/* <p>• El sistema validará automáticamente cada 3 segundos</p> */}
                                                 <p>• Asegúrate de tener buena iluminación</p>
                                             </div>
                                             {/* {validationAttempts > 0 && (

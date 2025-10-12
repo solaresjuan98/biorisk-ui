@@ -5,7 +5,7 @@ export const useCamera = () => {
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
-    const [hasMultipleCameras, setHasMultipleCameras] = useState(false); // Cambiado a false por defecto
+    const [hasMultipleCameras, setHasMultipleCameras] = useState(true);
     const [faceDetected, setFaceDetected] = useState(false);
     const [facePosition, setFacePosition] = useState<{ x: number, y: number, width: number, height: number } | null>(null);
     const [isProcessingFrame, setIsProcessingFrame] = useState(false);
@@ -27,19 +27,11 @@ export const useCamera = () => {
     // Nuevo: ref para prevenir múltiples llamadas simultáneas
     const streamInitializingRef = useRef(false);
 
-    // ✅ FUNCIÓN CORREGIDA: Verificar cámaras DESPUÉS de obtener permisos
-    const checkMultipleCameras = async (afterPermissionGranted: boolean = false) => {
+    const checkMultipleCameras = async () => {
         try {
             const devices = await navigator.mediaDevices.enumerateDevices();
             const videoDevices = devices.filter(device => device.kind === 'videoinput');
-            
-            console.log('📱 Cámaras detectadas:', videoDevices.length, afterPermissionGranted ? '(después de permisos)' : '(sin permisos)');
-            
-            // En móviles, solo confiar en el resultado si tenemos permisos o si ya detectamos múltiples
-            if (afterPermissionGranted || videoDevices.length > 1) {
-                setHasMultipleCameras(videoDevices.length > 1);
-                console.log('🔧 hasMultipleCameras actualizado a:', videoDevices.length > 1);
-            }
+            setHasMultipleCameras(videoDevices.length > 1);
         } catch (error) {
             console.error('Error al detectar cámaras:', error);
             setHasMultipleCameras(false);
@@ -211,9 +203,6 @@ export const useCamera = () => {
 
             const stream = await navigator.mediaDevices.getUserMedia(constraints);
 
-            // ✅ NUEVO: Verificar cámaras DESPUÉS de obtener el stream exitosamente
-            await checkMultipleCameras(true);
-
             // Verificar nuevamente después de getUserMedia (el usuario pudo cambiar de pantalla)
             if (!videoRef.current) {
                 console.warn('⚠️ videoRef perdido después de getUserMedia');
@@ -307,7 +296,6 @@ export const useCamera = () => {
         }
     };
 
-    // ✅ FUNCIÓN CORREGIDA: openCamera 
     const openCamera = async () => {
         try {
             if (!navigator.mediaDevices?.getUserMedia) {
@@ -319,8 +307,8 @@ export const useCamera = () => {
             await stopStreamSafely();
             resetValidation();
     
-            // ✅ REMOVIDO: No verificar cámaras aquí, se hará después de los permisos
-            // await checkMultipleCameras();
+            // ✅ SOLUCIÓN: Verificar cámaras ANTES de abrir
+            await checkMultipleCameras();
     
             // CRÍTICO: Esperar más tiempo en móviles Samsung
             await new Promise(resolve => setTimeout(resolve, 200));
@@ -353,7 +341,6 @@ export const useCamera = () => {
                 throw new Error('No se pudo obtener el stream');
             }
     
-            // ✅ Las cámaras ya se verificaron dentro de startStreamSafely()
             // Esperar más antes de iniciar captura automática
             setTimeout(startAutomaticCapture, 1000);
     
@@ -478,9 +465,8 @@ export const useCamera = () => {
     };
 
     useEffect(() => {
-        // ✅ REMOVIDO: checkMultipleCameras() inicial
-        // Solo hacer una verificación básica al montar, la verificación real se hará después de los permisos
-        
+        checkMultipleCameras();
+
         return () => {
             // Cleanup al desmontar
             stopAutomaticCapture();

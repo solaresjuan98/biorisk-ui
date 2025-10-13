@@ -80,48 +80,48 @@ export const correctImageOrientation = (
 
             // Configurar transformaciones según orientación EXIF
             switch (orientation) {
-                case 2:
-                    // Espejo horizontal
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.transform(-1, 0, 0, 1, width, 0);
-                    break;
-                case 3:
-                    // Rotación 180°
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.transform(-1, 0, 0, -1, width, height);
-                    break;
-                case 4:
-                    // Espejo vertical
-                    canvas.width = width;
-                    canvas.height = height;
-                    ctx.transform(1, 0, 0, -1, 0, height);
-                    break;
-                case 5:
-                    // Espejo horizontal + Rotación 90° antihorario
-                    canvas.width = height;
-                    canvas.height = width;
-                    ctx.transform(0, 1, 1, 0, 0, 0);
-                    break;
-                case 6:
-                    // Rotación 90° horario
-                    canvas.width = height;
-                    canvas.height = width;
-                    ctx.transform(0, 1, -1, 0, height, 0);
-                    break;
-                case 7:
-                    // Espejo horizontal + Rotación 90° horario
-                    canvas.width = height;
-                    canvas.height = width;
-                    ctx.transform(0, -1, -1, 0, height, width);
-                    break;
-                case 8:
-                    // Rotación 90° antihorario
-                    canvas.width = height;
-                    canvas.height = width;
-                    ctx.transform(0, -1, 1, 0, 0, width);
-                    break;
+                // case 2:
+                //     // Espejo horizontal
+                //     canvas.width = width;
+                //     canvas.height = height;
+                //     ctx.transform(-1, 0, 0, 1, width, 0);
+                //     break;
+                // case 3:
+                //     // Rotación 180°
+                //     canvas.width = width;
+                //     canvas.height = height;
+                //     ctx.transform(-1, 0, 0, -1, width, height);
+                //     break;
+                // case 4:
+                //     // Espejo vertical
+                //     canvas.width = width;
+                //     canvas.height = height;
+                //     ctx.transform(1, 0, 0, -1, 0, height);
+                //     break;
+                // case 5:
+                //     // Espejo horizontal + Rotación 90° antihorario
+                //     canvas.width = height;
+                //     canvas.height = width;
+                //     ctx.transform(0, 1, 1, 0, 0, 0);
+                //     break;
+                // case 6:
+                //     // Rotación 90° horario
+                //     canvas.width = height;
+                //     canvas.height = width;
+                //     ctx.transform(0, 1, -1, 0, height, 0);
+                //     break;
+                // case 7:
+                //     // Espejo horizontal + Rotación 90° horario
+                //     canvas.width = height;
+                //     canvas.height = width;
+                //     ctx.transform(0, -1, -1, 0, height, width);
+                //     break;
+                // case 8:
+                //     // Rotación 90° antihorario
+                //     canvas.width = height;
+                //     canvas.height = width;
+                //     ctx.transform(0, -1, 1, 0, 0, width);
+                //     break;
                 default:
                     // Sin transformación (orientación 1 o desconocida)
                     canvas.width = width;
@@ -136,7 +136,6 @@ export const correctImageOrientation = (
         img.src = imageDataUrl;
     });
 };
-
 // Función combinada que procesa el archivo completo
 export const processImageFile = async (file: File): Promise<string> => {
     // Leer el archivo como Data URL
@@ -148,6 +147,7 @@ export const processImageFile = async (file: File): Promise<string> => {
     
     // Obtener orientación EXIF
     const orientation = await getImageOrientation(file);
+    console.log('Image orientation:', orientation);
     
     // Si tiene orientación EXIF problemática, corregirla
     if (orientation > 1) {

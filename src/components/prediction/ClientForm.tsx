@@ -83,6 +83,7 @@ interface ClientFormProps {
 }
 
 // Componente de Select Personalizado - CORREGIDO PARA ANDROID
+// Componente de Select Personalizado - CORREGIDO PARA ANDROID
 interface CustomSelectProps {
     value: string;
     onChange: (value: string) => void;
@@ -119,6 +120,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
     const [initialViewportHeight, setInitialViewportHeight] = useState(0);
     const [shouldFocusInput, setShouldFocusInput] = useState(false);
+    const [inputFocused, setInputFocused] = useState(false);
 
     const filteredOptions = options.filter(option =>
         option.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -133,11 +135,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 // ANDROID: Enfoque más suave - solo prevenir overflow sin position fixed
                 const originalOverflow = document.body.style.overflow;
                 const originalTouchAction = document.body.style.touchAction;
-                
+
                 // Solo prevenir scroll del body, mantener posición
                 document.body.style.overflow = 'hidden';
                 document.body.style.touchAction = 'none';
-                
+
                 // Prevenir eventos de scroll solo en el document, no en el dropdown
                 const preventScroll = (e: TouchEvent) => {
                     // Solo prevenir si el touch no es dentro del dropdown
@@ -268,6 +270,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 setIsOpen(false);
                 setSearchTerm('');
                 setShouldFocusInput(false);
+                setInputFocused(false);
             }
         };
 
@@ -409,18 +412,59 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         if (!disabled) {
             setIsOpen(!isOpen);
             setShouldFocusInput(false);
+            setInputFocused(false);
         }
     };
 
-    // Manejar clic/focus en el input de búsqueda - NUEVO PARA ANDROID
+    // Manejar clic/focus en el input de búsqueda - MEJORADO CON SCROLL
     const handleInputFocus = () => {
+        setInputFocused(true);
         if (isAndroid) {
             setShouldFocusInput(true);
             // En Android, focar explícitamente cuando el usuario toca el input
             setTimeout(() => {
                 inputRef.current?.focus();
+                // Hacer scroll suave hacia arriba para mejorar visibilidad
+                scrollDropdownUp();
             }, 100);
+        } else {
+            // Para iOS y desktop también mejorar la visibilidad
+            setTimeout(() => {
+                scrollDropdownUp();
+            }, 300); // Dar tiempo para que aparezca el teclado
         }
+    };
+
+    const handleInputBlur = () => {
+        setInputFocused(false);
+        // Restaurar posición original del dropdown
+        setTimeout(() => {
+            restoreDropdownPosition();
+        }, 100);
+    };
+
+    // Función para hacer scroll del dropdown hacia arriba
+    const scrollDropdownUp = () => {
+        if (dropdownRef.current) {
+            const dropdown = dropdownRef.current;
+            const rect = dropdown.getBoundingClientRect();
+            const viewportHeight = window.innerHeight;
+
+            // Si el dropdown está en la parte inferior, hacer scroll suave hacia arriba
+            if (rect.bottom > viewportHeight * 0.7) {
+                const scrollAmount = Math.min(120, rect.bottom - viewportHeight * 0.6);
+                window.scrollBy({
+                    top: -scrollAmount,
+                    behavior: 'smooth'
+                });
+            }
+        }
+    };
+
+    // Función para restaurar la posición original
+    const restoreDropdownPosition = () => {
+        // Solo restaurar si es necesario - esto es opcional
+        // En la mayoría de casos es mejor dejar la posición donde quedó
     };
 
     return (
@@ -462,10 +506,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
                     {/* Dropdown */}
                     <div className={`absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden ${(isKeyboardOpen && !isAndroid)
-                            ? 'fixed top-4 left-4 right-4 z-[9999] max-h-[40vh]'
-                            : 'max-h-60 sm:max-h-64'
+                        ? 'fixed top-4 left-4 right-4 z-[9999] max-h-[40vh]'
+                        : 'max-h-60 sm:max-h-64'
                         }`}>
-                        
+
                         {/* Campo de búsqueda */}
                         <div className="p-2 border-b border-gray-200 bg-white sticky top-0 z-10">
                             <input
@@ -474,8 +518,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                                 onFocus={handleInputFocus}
+                                onBlur={handleInputBlur}
                                 placeholder="Buscar..."
-                                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm sm:text-base"
+                                className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm sm:text-base transition-all ${inputFocused ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
                                 onClick={(e) => e.stopPropagation()}
                                 onTouchStart={(e) => {
                                     e.stopPropagation();

@@ -83,6 +83,7 @@ interface ClientFormProps {
 }
 
 // Componente de Select Personalizado
+// Componente de Select Personalizado - VERSIÓN CORREGIDA
 interface CustomSelectProps {
     value: string;
     onChange: (value: string) => void;
@@ -104,6 +105,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
+    const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+    // Estado para detectar si el usuario está haciendo scroll
+    const [isScrolling, setIsScrolling] = useState(false);
+    const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
     const filteredOptions = options.filter(option =>
         option.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -111,17 +117,76 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
     const selectedOption = options.find(opt => opt.value === value);
 
+    // Mejorar el manejo de clics fuera del componente
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
+        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
+            // No cerrar si el usuario está haciendo scroll
+            if (isScrolling) {
+                return;
+            }
+
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
                 setSearchTerm('');
             }
         };
 
+        // Agregar ambos eventos: mouse y touch
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
-    }, []);
+        document.addEventListener('touchstart', handleClickOutside);
+        
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
+    }, [isScrolling]);
+
+    // Manejar eventos de scroll en el dropdown
+    useEffect(() => {
+        const scrollContainer = scrollContainerRef.current;
+        if (!scrollContainer) return;
+
+        const handleScrollStart = () => {
+            setIsScrolling(true);
+            
+            // Limpiar timeout anterior si existe
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
+            
+            // Marcar que terminó el scroll después de 150ms de inactividad
+            scrollTimeoutRef.current = setTimeout(() => {
+                setIsScrolling(false);
+            }, 150);
+        };
+
+        const handleTouchStart = () => {
+            setIsScrolling(true);
+        };
+
+        const handleTouchEnd = () => {
+            // Esperar un poco antes de permitir que se cierre el dropdown
+            setTimeout(() => {
+                setIsScrolling(false);
+            }, 100);
+        };
+
+        scrollContainer.addEventListener('scroll', handleScrollStart);
+        scrollContainer.addEventListener('touchstart', handleTouchStart);
+        scrollContainer.addEventListener('touchend', handleTouchEnd);
+        scrollContainer.addEventListener('touchmove', handleScrollStart);
+
+        return () => {
+            scrollContainer.removeEventListener('scroll', handleScrollStart);
+            scrollContainer.removeEventListener('touchstart', handleTouchStart);
+            scrollContainer.removeEventListener('touchend', handleTouchEnd);
+            scrollContainer.removeEventListener('touchmove', handleScrollStart);
+            
+            if (scrollTimeoutRef.current) {
+                clearTimeout(scrollTimeoutRef.current);
+            }
+        };
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen && inputRef.current) {
@@ -130,9 +195,27 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     }, [isOpen]);
 
     const handleSelect = (optionValue: string) => {
+        // Evitar selección accidental durante scroll
+        if (isScrolling) {
+            return;
+        }
+        
         onChange(optionValue);
         setIsOpen(false);
         setSearchTerm('');
+    };
+
+    // Prevenir que el click en opciones cierre el dropdown durante scroll
+    const handleOptionClick = (optionValue: string, event: React.MouseEvent | React.TouchEvent) => {
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // Pequeño delay para evitar selección accidental
+        setTimeout(() => {
+            if (!isScrolling) {
+                handleSelect(optionValue);
+            }
+        }, 50);
     };
 
     return (
@@ -152,7 +235,8 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             </div>
 
             {isOpen && !disabled && (
-                <div className="absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg max-h-56 sm:max-h-64 overflow-hidden">
+                <div className="absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden">
+                    {/* Campo de búsqueda */}
                     <div className="p-2 border-b border-gray-200">
                         <input
                             ref={inputRef}
@@ -162,27 +246,48 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                             placeholder="Buscar..."
                             className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm sm:text-base"
                             onClick={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => e.stopPropagation()}
                         />
                     </div>
-                    <div className="overflow-y-auto max-h-40 sm:max-h-48">
+                    
+                    {/* Contenedor scrolleable con altura aumentada para móviles */}
+                    <div 
+                        ref={scrollContainerRef}
+                        className="overflow-y-auto max-h-48 sm:max-h-64 md:max-h-72"
+                        style={{ 
+                            // Mejoras para scroll en móviles
+                            WebkitOverflowScrolling: 'touch',
+                            overscrollBehavior: 'contain'
+                        }}
+                    >
                         {filteredOptions.length > 0 ? (
                             filteredOptions.map((option) => (
                                 <div
                                     key={option.value}
-                                    onClick={() => handleSelect(option.value)}
-                                    className={`px-3 sm:px-4 py-2.5 sm:py-3 cursor-pointer transition-colors text-sm sm:text-base ${option.value === value
+                                    onClick={(e) => handleOptionClick(option.value, e)}
+                                    onTouchEnd={(e) => handleOptionClick(option.value, e)}
+                                    className={`px-3 sm:px-4 py-3 sm:py-4 cursor-pointer transition-colors text-sm sm:text-base select-none ${option.value === value
                                         ? 'bg-green-50 text-gray-900 font-medium'
-                                        : 'hover:bg-gray-50 text-gray-700'
+                                        : 'hover:bg-gray-50 text-gray-700 active:bg-gray-100'
                                         }`}
+                                    // Prevenir selección de texto
+                                    style={{ 
+                                        userSelect: 'none',
+                                        WebkitUserSelect: 'none',
+                                        touchAction: 'manipulation'
+                                    }}
                                 >
                                     {option.label}
                                 </div>
                             ))
                         ) : (
-                            <div className="px-3 sm:px-4 py-2.5 sm:py-3 text-gray-500 text-center text-sm sm:text-base">
+                            <div className="px-3 sm:px-4 py-3 sm:py-4 text-gray-500 text-center text-sm sm:text-base">
                                 No se encontraron resultados
                             </div>
                         )}
+                        
+                        {/* Espacio adicional al final para facilitar scroll en móviles */}
+                        <div className="h-2"></div>
                     </div>
                 </div>
             )}
@@ -911,8 +1016,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                     )}
                                                 </div>
                                             </div>
-                                            
-                                            {hasMultipleCameras && APP_ENVIRONMENT === 'development' ? 'hay más camaras detectada': 'solo hay una camara detectada'}
+
+                                            {hasMultipleCameras && APP_ENVIRONMENT === 'development' ? 'hay más camaras detectada' : 'solo hay una camara detectada'}
                                             {/* Botón para cambiar cámara */}
                                             {isCameraOpen && (
                                                 <button
@@ -920,8 +1025,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                     onClick={toggleCamera}
                                                     disabled={isValidatingWithEndpoint || !hasMultipleCameras}
                                                     className={`absolute top-2 sm:top-4 right-2 sm:right-4 p-2 sm:p-2.5 md:p-3 backdrop-blur-md rounded-full transition-all duration-200 shadow-lg ${isValidatingWithEndpoint || !hasMultipleCameras
-                                                            ? 'bg-gray-500/20 cursor-not-allowed opacity-50'
-                                                            : 'bg-white/30 hover:bg-white/40 cursor-pointer hover:scale-105'
+                                                        ? 'bg-gray-500/20 cursor-not-allowed opacity-50'
+                                                        : 'bg-white/30 hover:bg-white/40 cursor-pointer hover:scale-105'
                                                         }`}
                                                     title={
                                                         !hasMultipleCameras

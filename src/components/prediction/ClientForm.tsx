@@ -82,6 +82,7 @@ interface ClientFormProps {
     setEndpointUrl?: (url: string) => void;
 }
 // Componente de Select Personalizado - FIX DEFINITIVO PARA MÓVILES
+// Componente de Select Personalizado - ARREGLADO PARA SCROLL CON TECLADO VIRTUAL
 interface CustomSelectProps {
     value: string;
     onChange: (value: string) => void;
@@ -104,15 +105,15 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const scrollableRef = useRef<HTMLDivElement>(null);
-    
+
     // Estados para detectar si el usuario está haciendo scroll vs tap
     const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
     const [isScrolling, setIsScrolling] = useState(false);
-    
+
     // Detectar Samsung Internet Browser
-    const isSamsungBrowser = typeof navigator !== 'undefined' && 
+    const isSamsungBrowser = typeof navigator !== 'undefined' &&
         /SamsungBrowser/i.test(navigator.userAgent);
-    
+
     // Detectar si el teclado virtual está activo
     const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
     const [initialViewportHeight, setInitialViewportHeight] = useState(0);
@@ -123,37 +124,56 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
     const selectedOption = options.find(opt => opt.value === value);
 
-    // Prevenir scroll de la página cuando el dropdown está abierto
+    // Prevenir scroll de la página cuando el dropdown está abierto - MEJORADO
     useEffect(() => {
         if (isOpen) {
-            // Manejo especial cuando el teclado está abierto
             if (isKeyboardOpen) {
-                // Cuando el teclado está abierto, usar estrategia menos agresiva
-                document.body.style.touchAction = 'none';
-                document.documentElement.style.touchAction = 'none';
-                
+                // ESTRATEGIA MEJORADA: Cuando el teclado está abierto, solo prevenir scroll del body
+                // pero permitir scroll interno del dropdown
+                const originalOverflow = document.body.style.overflow;
+                const originalPosition = document.body.style.position;
+                const originalHeight = document.body.style.height;
+                const originalWidth = document.body.style.width;
+
+                // Solo fijar el body, no prevenir todos los touch events
+                document.body.style.overflow = 'hidden';
+                document.body.style.position = 'fixed';
+                document.body.style.height = '100vh';
+                document.body.style.width = '100vw';
+                document.body.style.top = `-${window.scrollY}px`;
+
                 return () => {
-                    document.body.style.touchAction = '';
-                    document.documentElement.style.touchAction = '';
+                    document.body.style.overflow = originalOverflow;
+                    document.body.style.position = originalPosition;
+                    document.body.style.height = originalHeight;
+                    document.body.style.width = originalWidth;
+                    document.body.style.top = '';
                 };
             } else if (isSamsungBrowser) {
-                // Para Samsung Browser sin teclado
-                const preventDefault = (e: Event) => e.preventDefault();
-                
+                // Para Samsung Browser sin teclado - comportamiento más específico
+                const preventDefault = (e: Event) => {
+                    // Solo prevenir si el target no es del dropdown
+                    const target = e.target as Element;
+                    const isDropdownElement = dropdownRef.current?.contains(target);
+                    if (!isDropdownElement) {
+                        e.preventDefault();
+                    }
+                };
+
                 document.body.style.overflow = 'hidden';
                 document.body.style.position = 'fixed';
                 document.body.style.width = '100%';
                 document.body.style.height = '100%';
-                
+
                 document.addEventListener('touchmove', preventDefault, { passive: false });
                 document.addEventListener('wheel', preventDefault, { passive: false });
-                
+
                 return () => {
                     document.body.style.overflow = '';
                     document.body.style.position = '';
                     document.body.style.width = '';
                     document.body.style.height = '';
-                    
+
                     document.removeEventListener('touchmove', preventDefault);
                     document.removeEventListener('wheel', preventDefault);
                 };
@@ -161,7 +181,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 // Comportamiento normal para otros navegadores sin teclado
                 const originalStyle = window.getComputedStyle(document.body).overflow;
                 document.body.style.overflow = 'hidden';
-                
+
                 return () => {
                     document.body.style.overflow = originalStyle;
                 };
@@ -169,27 +189,60 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         }
     }, [isOpen, isSamsungBrowser, isKeyboardOpen]);
 
+    // MEJORADO: Detección más precisa del teclado virtual
     useEffect(() => {
         // Guardar la altura inicial del viewport
-        setInitialViewportHeight(window.innerHeight);
-        
+        const initialHeight = window.innerHeight;
+        setInitialViewportHeight(initialHeight);
+
         // Detectar cambios en el viewport (teclado virtual)
         const handleResize = () => {
             const currentHeight = window.innerHeight;
-            const heightDifference = initialViewportHeight - currentHeight;
-            
-            // Si la diferencia es mayor a 150px, probablemente el teclado está abierto
-            setIsKeyboardOpen(heightDifference > 150);
+            const heightDifference = initialHeight - currentHeight;
+
+            // Considerar que el teclado está abierto si la diferencia es mayor a 150px
+            // y la nueva altura es menor que la inicial
+            const keyboardOpen = heightDifference > 150 && currentHeight < initialHeight;
+            setIsKeyboardOpen(keyboardOpen);
+
+            // Log para debugging (puedes quitar esto en producción)
+            console.log('Viewport change:', {
+                initial: initialHeight,
+                current: currentHeight,
+                difference: heightDifference,
+                keyboardOpen
+            });
         };
 
-        window.addEventListener('resize', handleResize);
-        window.addEventListener('orientationchange', handleResize);
-        
-        return () => {
-            window.removeEventListener('resize', handleResize);
-            window.removeEventListener('orientationchange', handleResize);
+        // Usar un debounce para evitar múltiples llamadas
+        let resizeTimeout: NodeJS.Timeout;
+        const debouncedResize = () => {
+            clearTimeout(resizeTimeout);
+            resizeTimeout = setTimeout(handleResize, 100);
         };
-    }, [initialViewportHeight]);
+
+        window.addEventListener('resize', debouncedResize);
+        window.addEventListener('orientationchange', debouncedResize);
+
+        // También escuchar eventos de visual viewport si está disponible
+        if ('visualViewport' in window) {
+            const visualViewport = window.visualViewport!;
+            visualViewport.addEventListener('resize', debouncedResize);
+
+            return () => {
+                clearTimeout(resizeTimeout);
+                window.removeEventListener('resize', debouncedResize);
+                window.removeEventListener('orientationchange', debouncedResize);
+                visualViewport.removeEventListener('resize', debouncedResize);
+            };
+        }
+
+        return () => {
+            clearTimeout(resizeTimeout);
+            window.removeEventListener('resize', debouncedResize);
+            window.removeEventListener('orientationchange', debouncedResize);
+        };
+    }, []);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -201,45 +254,74 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
         document.addEventListener('mousedown', handleClickOutside);
         document.addEventListener('touchstart', handleClickOutside, { passive: true });
-        
+
         return () => {
             document.removeEventListener('mousedown', handleClickOutside);
             document.removeEventListener('touchstart', handleClickOutside);
         };
     }, []);
 
-    // Manejar scroll dentro del dropdown
+    // MEJORADO: Manejar scroll dentro del dropdown con mejor lógica para teclado
     useEffect(() => {
         const scrollableElement = scrollableRef.current;
         if (!scrollableElement) return;
 
         const handleTouchMove = (e: TouchEvent) => {
-            const element = e.currentTarget as HTMLElement;
-            const { scrollTop, scrollHeight, clientHeight } = element;
-            
-            // Si está en el tope y intenta scrollear hacia arriba, prevenir
-            if (scrollTop === 0 && e.touches[0].clientY > e.changedTouches[0].clientY) {
-                e.preventDefault();
-            }
-            
-            // Si está en el fondo y intenta scrollear hacia abajo, prevenir
-            if (scrollTop + clientHeight >= scrollHeight && e.touches[0].clientY < e.changedTouches[0].clientY) {
-                e.preventDefault();
+            if (isKeyboardOpen) {
+                // CON TECLADO ABIERTO: Permitir scroll normal del dropdown
+                // Solo prevenir el bounce/overscroll en los límites
+                const element = e.currentTarget as HTMLElement;
+                const { scrollTop, scrollHeight, clientHeight } = element;
+
+                const touch = e.touches[0];
+                const deltaY = touchStart ? touchStart.y - touch.clientY : 0;
+
+                // Prevenir overscroll solo en los límites
+                if (scrollTop === 0 && deltaY < 0) {
+                    // En el tope y scrolleando hacia arriba
+                    e.preventDefault();
+                } else if (scrollTop + clientHeight >= scrollHeight && deltaY > 0) {
+                    // En el fondo y scrolleando hacia abajo
+                    e.preventDefault();
+                }
+                // Si no está en los límites, permitir scroll normal
+            } else {
+                // SIN TECLADO: Lógica original
+                const element = e.currentTarget as HTMLElement;
+                const { scrollTop, scrollHeight, clientHeight } = element;
+
+                const touch = e.touches[0];
+                const deltaY = touchStart ? touchStart.y - touch.clientY : 0;
+
+                if (scrollTop === 0 && deltaY < 0) {
+                    e.preventDefault();
+                }
+
+                if (scrollTop + clientHeight >= scrollHeight && deltaY > 0) {
+                    e.preventDefault();
+                }
             }
         };
 
         scrollableElement.addEventListener('touchmove', handleTouchMove, { passive: false });
-        
+
         return () => {
             scrollableElement.removeEventListener('touchmove', handleTouchMove);
         };
-    }, [isOpen]);
+    }, [isOpen, isKeyboardOpen, touchStart]);
 
     useEffect(() => {
         if (isOpen && inputRef.current) {
-            inputRef.current.focus();
+            // Con teclado abierto, dar un pequeño delay para el foco
+            if (isKeyboardOpen) {
+                setTimeout(() => {
+                    inputRef.current?.focus();
+                }, 100);
+            } else {
+                inputRef.current.focus();
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, isKeyboardOpen]);
 
     const handleSelect = (optionValue: string) => {
         // Solo seleccionar si no está haciendo scroll
@@ -250,7 +332,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         }
     };
 
-    // Función para manejar el inicio del toque
+    // Función para manejar el inicio del toque - MEJORADO
     const handleTouchStart = (e: React.TouchEvent) => {
         const touch = e.touches[0];
         setTouchStart({
@@ -261,62 +343,40 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         setIsScrolling(false);
     };
 
-    // Función para detectar si el usuario está haciendo scroll
+    // Función para detectar si el usuario está haciendo scroll - MEJORADO
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!touchStart) return;
 
         const touch = e.touches[0];
         const deltaX = Math.abs(touch.clientX - touchStart.x);
         const deltaY = Math.abs(touch.clientY - touchStart.y);
-        
-        // Si se mueve más de 10px en cualquier dirección, considerarlo scroll
-        if (deltaX > 10 || deltaY > 10) {
+
+        // AJUSTADO: Con teclado abierto, ser más permisivo con el movimiento
+        const threshold = isKeyboardOpen ? 5 : 10;
+
+        if (deltaX > threshold || deltaY > threshold) {
             setIsScrolling(true);
         }
     };
 
-    // Función para manejar el final del toque
+    // Función para manejar el final del toque - MEJORADO
     const handleTouchEnd = (e: React.TouchEvent, optionValue: string) => {
         if (!touchStart) return;
 
         const touchEndTime = Date.now();
         const touchDuration = touchEndTime - touchStart.time;
-        
-        // Solo seleccionar si:
-        // 1. No está haciendo scroll
-        // 2. El toque fue corto (menos de 300ms)
-        // 3. No se movió mucho
-        if (!isScrolling && touchDuration < 300) {
+
+        // AJUSTADO: Con teclado abierto, ser más permisivo con el tiempo
+        const maxDuration = isKeyboardOpen ? 500 : 300;
+
+        if (!isScrolling && touchDuration < maxDuration) {
             e.preventDefault();
             e.stopPropagation();
             handleSelect(optionValue);
         }
-        
-        setTouchStart(null);
-        // Reset isScrolling después de un pequeño delay
-        setTimeout(() => setIsScrolling(false), 100);
-    };
 
-    // Manejar scroll manual para Samsung Browser
-    const handleManualScroll = (e: React.TouchEvent) => {
-        if (!isSamsungBrowser || !touchStart || !scrollableRef.current) return;
-        
-        const touch = e.touches[0];
-        const deltaY = touchStart.y - touch.clientY;
-        const element = scrollableRef.current;
-        
-        // Scroll manual directo
-        element.scrollTop = Math.max(0, Math.min(
-            element.scrollHeight - element.clientHeight,
-            element.scrollTop + deltaY
-        ));
-        
-        // Actualizar touchStart para el siguiente movimiento
-        setTouchStart({
-            x: touch.clientX,
-            y: touch.clientY,
-            time: touchStart.time
-        });
+        setTouchStart(null);
+        setTimeout(() => setIsScrolling(false), 100);
     };
 
     const handleToggle = () => {
@@ -347,19 +407,26 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
             {isOpen && !disabled && (
                 <>
-                    {/* Overlay para móviles que previene scroll del fondo */}
-                    <div 
-                        className="fixed inset-0 z-40 bg-black/20 md:hidden"
+                    {/* Overlay - MEJORADO para teclado */}
+                    <div
+                        className={`fixed inset-0 z-40 md:hidden ${isKeyboardOpen ? 'bg-black/10' : 'bg-black/20'
+                            }`}
                         onClick={() => setIsOpen(false)}
-                        onTouchMove={(e) => e.preventDefault()}
+                        onTouchMove={(e) => {
+                            // Con teclado abierto, solo prevenir si no es scroll del dropdown
+                            if (!isKeyboardOpen) {
+                                e.preventDefault();
+                            }
+                        }}
                     />
-                    
-                    {/* Dropdown */}
-                    <div className={`absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden ${
-                        isKeyboardOpen ? 'fixed top-4 left-4 right-4 z-[9999]' : ''
-                    }`}>
-                        {/* Campo de búsqueda */}
-                        <div className="p-2 border-b border-gray-200">
+
+                    {/* Dropdown - MEJORADO para teclado */}
+                    <div className={`absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden ${isKeyboardOpen
+                            ? 'fixed top-4 left-4 right-4 z-[9999] max-h-[40vh]'
+                            : 'max-h-60 sm:max-h-64'
+                        }`}>
+                        {/* Campo de búsqueda - MEJORADO */}
+                        <div className="p-2 border-b border-gray-200 bg-white sticky top-0 z-10">
                             <input
                                 ref={inputRef}
                                 type="text"
@@ -371,53 +438,43 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                 onTouchStart={(e) => e.stopPropagation()}
                                 inputMode="text"
                                 autoComplete="off"
+                                // NUEVO: Evitar zoom en iOS
+                                style={{ fontSize: '16px' }}
                             />
                         </div>
-                        
-                        {/* Lista scrolleable */}
-                        <div 
+
+                        {/* Lista scrolleable - MEJORADO para teclado */}
+                        <div
                             ref={scrollableRef}
-                            className={`overflow-y-auto ${
-                                isKeyboardOpen ? 'max-h-40' : 'max-h-60 sm:max-h-64'
-                            }`}
-                            style={{ 
+                            className={`overflow-y-auto ${isKeyboardOpen ? 'max-h-[30vh]' : 'max-h-48 sm:max-h-52'
+                                }`}
+                            style={{
                                 WebkitOverflowScrolling: 'touch',
                                 overscrollBehavior: 'contain',
-                                touchAction: (isSamsungBrowser && !isKeyboardOpen) ? 'auto' : 'pan-y',
-                                // Propiedades adicionales para Samsung Browser
-                                ...((isSamsungBrowser && !isKeyboardOpen) && {
-                                    isolation: 'isolate',
-                                    transform: 'translateZ(0)',
-                                    willChange: 'scroll-position'
-                                }),
-                                // Cuando el teclado está abierto, usar posición más estable
+                                // AJUSTADO: Con teclado abierto, usar touch action normal
+                                touchAction: isKeyboardOpen ? 'pan-y' : (isSamsungBrowser ? 'auto' : 'pan-y'),
+                                // Propiedades mejoradas para scroll suave
+                                scrollBehavior: 'smooth',
                                 ...(isKeyboardOpen && {
+                                    // Con teclado abierto, optimizar para scroll
                                     position: 'relative',
-                                    zIndex: 10000
+                                    zIndex: 1,
+                                    isolation: 'isolate'
                                 })
                             }}
                             onTouchStart={(e) => {
+                                handleTouchStart(e);
                                 e.stopPropagation();
-                                // Para Samsung Browser sin teclado, forzar el foco en el elemento scrolleable
-                                if (isSamsungBrowser && !isKeyboardOpen && scrollableRef.current) {
-                                    scrollableRef.current.focus();
-                                }
                             }}
                             onTouchMove={(e) => {
+                                handleTouchMove(e);
                                 e.stopPropagation();
-                                // En Samsung Browser sin teclado, scroll manual
-                                if (isSamsungBrowser && !isKeyboardOpen) {
+                                // No prevenir default si el teclado está abierto
+                                if (!isKeyboardOpen && isSamsungBrowser) {
                                     e.preventDefault();
-                                    const touch = e.touches[0];
-                                    const element = scrollableRef.current;
-                                    if (element && touchStart) {
-                                        const deltaY = touchStart.y - touch.clientY;
-                                        element.scrollTop += deltaY;
-                                    }
                                 }
                             }}
-                            // Hacer el elemento focusable para Samsung Browser
-                            tabIndex={(isSamsungBrowser && !isKeyboardOpen) ? 0 : -1}
+                            tabIndex={-1}
                         >
                             {filteredOptions.length > 0 ? (
                                 filteredOptions.map((option) => (
@@ -426,37 +483,25 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                         onClick={() => handleSelect(option.value)}
                                         onTouchStart={(e) => {
                                             handleTouchStart(e);
-                                            if (isSamsungBrowser) {
-                                                e.stopPropagation();
-                                            }
+                                            e.stopPropagation();
                                         }}
                                         onTouchMove={(e) => {
-                                            if (isSamsungBrowser) {
-                                                handleManualScroll(e);
-                                                e.preventDefault();
-                                                e.stopPropagation();
-                                            } else {
-                                                handleTouchMove(e);
-                                            }
+                                            handleTouchMove(e);
+                                            e.stopPropagation();
                                         }}
                                         onTouchEnd={(e) => {
-                                            if (!isSamsungBrowser) {
-                                                handleTouchEnd(e, option.value);
-                                            } else {
-                                                // En Samsung Browser, manejo más simple
-                                                if (!isScrolling) {
-                                                    handleSelect(option.value);
-                                                }
-                                            }
+                                            handleTouchEnd(e, option.value);
                                         }}
                                         className={`px-3 sm:px-4 py-3 sm:py-4 cursor-pointer transition-colors text-sm sm:text-base select-none ${option.value === value
                                             ? 'bg-green-50 text-gray-900 font-medium'
                                             : 'hover:bg-gray-50 text-gray-700 active:bg-blue-50'
                                             }`}
-                                        style={{ 
+                                        style={{
                                             touchAction: 'manipulation',
                                             userSelect: 'none',
-                                            WebkitUserSelect: 'none'
+                                            WebkitUserSelect: 'none',
+                                            // NUEVO: Mejorar la respuesta táctil
+                                            WebkitTapHighlightColor: 'transparent'
                                         }}
                                     >
                                         {option.label}
@@ -474,7 +519,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         </div>
     );
 };
-
 export const ClientForm: React.FC<ClientFormProps> = ({
     cui,
     setCui,

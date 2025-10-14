@@ -85,6 +85,7 @@ interface ClientFormProps {
 // Componente de Select Personalizado
 
 // Componente de Select Personalizado - VERSIÓN SIMPLE Y FUNCIONAL
+// Componente de Select Personalizado - FIX DEFINITIVO PARA MÓVILES
 interface CustomSelectProps {
     value: string;
     onChange: (value: string) => void;
@@ -106,7 +107,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const [searchTerm, setSearchTerm] = useState('');
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
-    const listContainerRef = useRef<HTMLDivElement>(null);
+    const scrollableRef = useRef<HTMLDivElement>(null);
 
     const filteredOptions = options.filter(option =>
         option.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -114,19 +115,62 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
     const selectedOption = options.find(opt => opt.value === value);
 
+    // Prevenir scroll de la página cuando el dropdown está abierto
     useEffect(() => {
-        const handleClickOutside = (event: MouseEvent) => {
-            // Solo verificar si el click fue fuera del dropdown completo
+        if (isOpen) {
+            // Prevenir scroll del body en móviles
+            const originalStyle = window.getComputedStyle(document.body).overflow;
+            document.body.style.overflow = 'hidden';
+            
+            return () => {
+                document.body.style.overflow = originalStyle;
+            };
+        }
+    }, [isOpen]);
+
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent | TouchEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
                 setSearchTerm('');
             }
         };
 
-        // Solo usar mousedown para evitar interferir con touch events
         document.addEventListener('mousedown', handleClickOutside);
-        return () => document.removeEventListener('mousedown', handleClickOutside);
+        document.addEventListener('touchstart', handleClickOutside, { passive: true });
+        
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+            document.removeEventListener('touchstart', handleClickOutside);
+        };
     }, []);
+
+    // Manejar scroll dentro del dropdown
+    useEffect(() => {
+        const scrollableElement = scrollableRef.current;
+        if (!scrollableElement) return;
+
+        const handleTouchMove = (e: TouchEvent) => {
+            const element = e.currentTarget as HTMLElement;
+            const { scrollTop, scrollHeight, clientHeight } = element;
+            
+            // Si está en el tope y intenta scrollear hacia arriba, prevenir
+            if (scrollTop === 0 && e.touches[0].clientY > e.changedTouches[0].clientY) {
+                e.preventDefault();
+            }
+            
+            // Si está en el fondo y intenta scrollear hacia abajo, prevenir
+            if (scrollTop + clientHeight >= scrollHeight && e.touches[0].clientY < e.changedTouches[0].clientY) {
+                e.preventDefault();
+            }
+        };
+
+        scrollableElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+        
+        return () => {
+            scrollableElement.removeEventListener('touchmove', handleTouchMove);
+        };
+    }, [isOpen]);
 
     useEffect(() => {
         if (isOpen && inputRef.current) {
@@ -140,10 +184,20 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         setSearchTerm('');
     };
 
+    const handleToggle = () => {
+        if (!disabled) {
+            setIsOpen(!isOpen);
+        }
+    };
+
     return (
         <div className="relative" ref={dropdownRef}>
             <div
-                onClick={() => !disabled && setIsOpen(!isOpen)}
+                onClick={handleToggle}
+                onTouchEnd={(e) => {
+                    e.preventDefault();
+                    handleToggle();
+                }}
                 className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-300 rounded-lg sm:rounded-xl flex items-center justify-between cursor-pointer transition-all ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'hover:border-blue-400'
                     } ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
             >
@@ -157,50 +211,74 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             </div>
 
             {isOpen && !disabled && (
-                <div className="absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg max-h-80 overflow-hidden">
-                    <div className="p-2 border-b border-gray-200">
-                        <input
-                            ref={inputRef}
-                            type="text"
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            placeholder="Buscar..."
-                            className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm sm:text-base"
-                            onClick={(e) => e.stopPropagation()}
-                        />
-                    </div>
+                <>
+                    {/* Overlay para móviles que previene scroll del fondo */}
                     <div 
-                        ref={listContainerRef}
-                        className="overflow-y-auto max-h-64"
-                        style={{ 
-                            WebkitOverflowScrolling: 'touch',
-                            scrollBehavior: 'smooth'
-                        }}
-                    >
-                        {filteredOptions.length > 0 ? (
-                            filteredOptions.map((option) => (
-                                <div
-                                    key={option.value}
-                                    onClick={() => handleSelect(option.value)}
-                                    className={`px-3 sm:px-4 py-2.5 sm:py-3 cursor-pointer transition-colors text-sm sm:text-base ${option.value === value
-                                        ? 'bg-green-50 text-gray-900 font-medium'
-                                        : 'hover:bg-gray-50 text-gray-700'
-                                        }`}
-                                >
-                                    {option.label}
+                        className="fixed inset-0 z-40 bg-black/20 md:hidden"
+                        onClick={() => setIsOpen(false)}
+                        onTouchMove={(e) => e.preventDefault()}
+                    />
+                    
+                    {/* Dropdown */}
+                    <div className="absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden">
+                        {/* Campo de búsqueda */}
+                        <div className="p-2 border-b border-gray-200">
+                            <input
+                                ref={inputRef}
+                                type="text"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                placeholder="Buscar..."
+                                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm sm:text-base"
+                                onClick={(e) => e.stopPropagation()}
+                                onTouchStart={(e) => e.stopPropagation()}
+                            />
+                        </div>
+                        
+                        {/* Lista scrolleable */}
+                        <div 
+                            ref={scrollableRef}
+                            className="overflow-y-auto max-h-60 sm:max-h-64"
+                            style={{ 
+                                WebkitOverflowScrolling: 'touch',
+                                overscrollBehavior: 'contain',
+                                touchAction: 'pan-y'
+                            }}
+                            onTouchStart={(e) => e.stopPropagation()}
+                            onTouchMove={(e) => e.stopPropagation()}
+                        >
+                            {filteredOptions.length > 0 ? (
+                                filteredOptions.map((option) => (
+                                    <div
+                                        key={option.value}
+                                        onClick={() => handleSelect(option.value)}
+                                        onTouchEnd={(e) => {
+                                            e.preventDefault();
+                                            e.stopPropagation();
+                                            handleSelect(option.value);
+                                        }}
+                                        className={`px-3 sm:px-4 py-3 sm:py-4 cursor-pointer transition-colors text-sm sm:text-base active:bg-blue-50 ${option.value === value
+                                            ? 'bg-green-50 text-gray-900 font-medium'
+                                            : 'hover:bg-gray-50 text-gray-700'
+                                            }`}
+                                        style={{ touchAction: 'manipulation' }}
+                                    >
+                                        {option.label}
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="px-3 sm:px-4 py-3 sm:py-4 text-gray-500 text-center text-sm sm:text-base">
+                                    No se encontraron resultados
                                 </div>
-                            ))
-                        ) : (
-                            <div className="px-3 sm:px-4 py-2.5 sm:py-3 text-gray-500 text-center text-sm sm:text-base">
-                                No se encontraron resultados
-                            </div>
-                        )}
+                            )}
+                        </div>
                     </div>
-                </div>
+                </>
             )}
         </div>
     );
 };
+
 export const ClientForm: React.FC<ClientFormProps> = ({
     cui,
     setCui,

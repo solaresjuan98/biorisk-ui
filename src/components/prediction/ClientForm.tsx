@@ -84,15 +84,7 @@ interface ClientFormProps {
 
 // Componente de Select Personalizado - CORREGIDO PARA ANDROID
 // Componente de Select Personalizado - CORREGIDO PARA ANDROID
-interface CustomSelectProps {
-    value: string;
-    onChange: (value: string) => void;
-    options: { value: string; label: string }[];
-    placeholder: string;
-    disabled?: boolean;
-    icon?: React.ReactNode;
-}
-
+// Componente CustomSelect corregido para Android Chrome
 const CustomSelect: React.FC<CustomSelectProps> = ({
     value,
     onChange,
@@ -116,7 +108,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
     const isSamsungBrowser = typeof navigator !== 'undefined' && /SamsungBrowser/i.test(navigator.userAgent);
 
-    // Detectar si el teclado virtual está activo (solo para iOS y desktop)
+    // Detectar si el teclado virtual está activo
     const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
     const [initialViewportHeight, setInitialViewportHeight] = useState(0);
     const [shouldFocusInput, setShouldFocusInput] = useState(false);
@@ -128,140 +120,179 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
     const selectedOption = options.find(opt => opt.value === value);
 
-    // Prevenir scroll de la página cuando el dropdown está abierto - CORREGIDO PARA ANDROID
+    // CORRECCIÓN PRINCIPAL: Prevenir scroll de la página cuando el dropdown está abierto
     useEffect(() => {
         if (isOpen) {
+            const preventDefault = (e: Event) => {
+                // Verificar si el evento viene del dropdown
+                const target = e.target as Element;
+                const isFromDropdown = dropdownRef.current?.contains(target);
+
+                // Si NO viene del dropdown, prevenir el evento
+                if (!isFromDropdown) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            };
+
+            const preventTouchMove = (e: TouchEvent) => {
+                const target = e.target as Element;
+                const isFromDropdown = dropdownRef.current?.contains(target);
+
+                if (!isFromDropdown) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            };
+
             if (isAndroid) {
-                // ANDROID: Enfoque más suave - solo prevenir overflow sin position fixed
+                // ANDROID: Prevenir scroll más agresivamente
                 const originalOverflow = document.body.style.overflow;
-                const originalTouchAction = document.body.style.touchAction;
+                const originalPosition = document.body.style.position;
+                const originalTop = document.body.style.top;
+                const scrollY = window.scrollY;
 
-                // Solo prevenir scroll del body, mantener posición
                 document.body.style.overflow = 'hidden';
-                document.body.style.touchAction = 'none';
+                document.body.style.position = 'fixed';
+                document.body.style.top = `-${scrollY}px`;
+                document.body.style.width = '100%';
 
-                // Prevenir eventos de scroll solo en el document, no en el dropdown
-                const preventScroll = (e: TouchEvent) => {
-                    // Solo prevenir si el touch no es dentro del dropdown
-                    const target = e.target as Element;
-                    const isDropdownTouch = dropdownRef.current?.contains(target);
-                    if (!isDropdownTouch) {
-                        e.preventDefault();
-                    }
-                };
-
-                document.addEventListener('touchmove', preventScroll, { passive: false });
-                document.addEventListener('touchstart', preventScroll, { passive: false });
+                // Prevenir eventos de touch y wheel en toda la página
+                document.addEventListener('touchmove', preventTouchMove, { passive: false });
+                document.addEventListener('wheel', preventDefault, { passive: false });
+                document.addEventListener('scroll', preventDefault, { passive: false });
 
                 return () => {
                     document.body.style.overflow = originalOverflow;
-                    document.body.style.touchAction = originalTouchAction;
-                    document.removeEventListener('touchmove', preventScroll);
-                    document.removeEventListener('touchstart', preventScroll);
+                    document.body.style.position = originalPosition;
+                    document.body.style.top = originalTop;
+                    document.body.style.width = '';
+
+                    // Restaurar posición de scroll
+                    window.scrollTo(0, scrollY);
+
+                    document.removeEventListener('touchmove', preventTouchMove);
+                    document.removeEventListener('wheel', preventDefault);
+                    document.removeEventListener('scroll', preventDefault);
                 };
             } else if (isKeyboardOpen) {
-                // iOS/Desktop CON TECLADO: Comportamiento original mejorado
+                // iOS/Desktop CON TECLADO
                 const originalOverflow = document.body.style.overflow;
                 const originalPosition = document.body.style.position;
                 const originalHeight = document.body.style.height;
                 const originalWidth = document.body.style.width;
+                const originalTop = document.body.style.top;
+                const scrollY = window.scrollY;
 
                 document.body.style.overflow = 'hidden';
                 document.body.style.position = 'fixed';
                 document.body.style.height = '100vh';
                 document.body.style.width = '100vw';
-                document.body.style.top = `-${window.scrollY}px`;
+                document.body.style.top = `-${scrollY}px`;
+
+                document.addEventListener('touchmove', preventTouchMove, { passive: false });
+                document.addEventListener('wheel', preventDefault, { passive: false });
 
                 return () => {
                     document.body.style.overflow = originalOverflow;
                     document.body.style.position = originalPosition;
                     document.body.style.height = originalHeight;
                     document.body.style.width = originalWidth;
-                    document.body.style.top = '';
-                };
-            } else if (isSamsungBrowser) {
-                // Samsung Browser sin teclado
-                const preventDefault = (e: Event) => {
-                    const target = e.target as Element;
-                    const isDropdownElement = dropdownRef.current?.contains(target);
-                    if (!isDropdownElement) {
-                        e.preventDefault();
-                    }
-                };
+                    document.body.style.top = originalTop;
 
-                document.body.style.overflow = 'hidden';
-                document.body.style.position = 'fixed';
-                document.body.style.width = '100%';
-                document.body.style.height = '100%';
+                    window.scrollTo(0, scrollY);
 
-                document.addEventListener('touchmove', preventDefault, { passive: false });
-                document.addEventListener('wheel', preventDefault, { passive: false });
-
-                return () => {
-                    document.body.style.overflow = '';
-                    document.body.style.position = '';
-                    document.body.style.width = '';
-                    document.body.style.height = '';
-
-                    document.removeEventListener('touchmove', preventDefault);
+                    document.removeEventListener('touchmove', preventTouchMove);
                     document.removeEventListener('wheel', preventDefault);
                 };
             } else {
-                // Otros navegadores sin teclado
-                const originalStyle = window.getComputedStyle(document.body).overflow;
+                // Otros casos
+                const originalOverflow = document.body.style.overflow;
                 document.body.style.overflow = 'hidden';
 
+                document.addEventListener('touchmove', preventTouchMove, { passive: false });
+                document.addEventListener('wheel', preventDefault, { passive: false });
+
                 return () => {
-                    document.body.style.overflow = originalStyle;
+                    document.body.style.overflow = originalOverflow;
+                    document.removeEventListener('touchmove', preventTouchMove);
+                    document.removeEventListener('wheel', preventDefault);
                 };
             }
         }
-    }, [isOpen, isSamsungBrowser, isKeyboardOpen, isAndroid]);
+    }, [isOpen, isKeyboardOpen, isAndroid]);
 
-    // Detección del teclado virtual - DESHABILITADO PARA ANDROID
+    // Detección del teclado virtual - MEJORADO
     useEffect(() => {
         if (isAndroid) {
-            // En Android no detectamos el teclado automáticamente
-            return;
-        }
+            // En Android, detectar cambios de viewport más agresivamente
+            const handleResize = () => {
+                const currentHeight = window.innerHeight;
+                const currentVisualHeight = window.visualViewport?.height || currentHeight;
 
-        // Solo para iOS y desktop
-        const initialHeight = window.innerHeight;
-        setInitialViewportHeight(initialHeight);
+                // Considerar que el teclado está abierto si el viewport se reduce significativamente
+                const heightDifference = window.screen.height - currentVisualHeight;
+                const keyboardOpen = heightDifference > 200; // Umbral más bajo para Android
 
-        const handleResize = () => {
-            const currentHeight = window.innerHeight;
-            const heightDifference = initialHeight - currentHeight;
-            const keyboardOpen = heightDifference > 150 && currentHeight < initialHeight;
-            setIsKeyboardOpen(keyboardOpen);
-        };
+                setIsKeyboardOpen(keyboardOpen);
+            };
 
-        let resizeTimeout: NodeJS.Timeout;
-        const debouncedResize = () => {
-            clearTimeout(resizeTimeout);
-            resizeTimeout = setTimeout(handleResize, 100);
-        };
+            handleResize(); // Ejecutar inmediatamente
 
-        window.addEventListener('resize', debouncedResize);
-        window.addEventListener('orientationchange', debouncedResize);
+            window.addEventListener('resize', handleResize);
 
-        if ('visualViewport' in window) {
-            const visualViewport = window.visualViewport!;
-            visualViewport.addEventListener('resize', debouncedResize);
+            if ('visualViewport' in window) {
+                const visualViewport = window.visualViewport!;
+                visualViewport.addEventListener('resize', handleResize);
+
+                return () => {
+                    window.removeEventListener('resize', handleResize);
+                    visualViewport.removeEventListener('resize', handleResize);
+                };
+            }
+
+            return () => {
+                window.removeEventListener('resize', handleResize);
+            };
+        } else {
+            // Lógica original para iOS y desktop
+            const initialHeight = window.innerHeight;
+            setInitialViewportHeight(initialHeight);
+
+            const handleResize = () => {
+                const currentHeight = window.innerHeight;
+                const heightDifference = initialHeight - currentHeight;
+                const keyboardOpen = heightDifference > 150 && currentHeight < initialHeight;
+                setIsKeyboardOpen(keyboardOpen);
+            };
+
+            let resizeTimeout: NodeJS.Timeout;
+            const debouncedResize = () => {
+                clearTimeout(resizeTimeout);
+                resizeTimeout = setTimeout(handleResize, 100);
+            };
+
+            window.addEventListener('resize', debouncedResize);
+            window.addEventListener('orientationchange', debouncedResize);
+
+            if ('visualViewport' in window) {
+                const visualViewport = window.visualViewport!;
+                visualViewport.addEventListener('resize', debouncedResize);
+
+                return () => {
+                    clearTimeout(resizeTimeout);
+                    window.removeEventListener('resize', debouncedResize);
+                    window.removeEventListener('orientationchange', debouncedResize);
+                    visualViewport.removeEventListener('resize', debouncedResize);
+                };
+            }
 
             return () => {
                 clearTimeout(resizeTimeout);
                 window.removeEventListener('resize', debouncedResize);
                 window.removeEventListener('orientationchange', debouncedResize);
-                visualViewport.removeEventListener('resize', debouncedResize);
             };
         }
-
-        return () => {
-            clearTimeout(resizeTimeout);
-            window.removeEventListener('resize', debouncedResize);
-            window.removeEventListener('orientationchange', debouncedResize);
-        };
     }, [isAndroid]);
 
     useEffect(() => {
@@ -283,81 +314,68 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         };
     }, []);
 
-    // Manejar scroll dentro del dropdown
+    // CORRECCIÓN: Manejar scroll dentro del dropdown de forma más estricta
     useEffect(() => {
         const scrollableElement = scrollableRef.current;
-        if (!scrollableElement) return;
+        if (!scrollableElement || !isOpen) return;
+
+        const handleTouchStart = (e: TouchEvent) => {
+            const touch = e.touches[0];
+            setTouchStart({
+                x: touch.clientX,
+                y: touch.clientY,
+                time: Date.now()
+            });
+            setIsScrolling(false);
+        };
 
         const handleTouchMove = (e: TouchEvent) => {
-            if (isAndroid) {
-                // ANDROID: Lógica simplificada para scroll
-                const element = e.currentTarget as HTMLElement;
-                const { scrollTop, scrollHeight, clientHeight } = element;
-                const touch = e.touches[0];
-                const deltaY = touchStart ? touchStart.y - touch.clientY : 0;
+            if (!touchStart) return;
 
-                // Prevenir overscroll en los límites
-                if (scrollTop === 0 && deltaY < 0) {
-                    e.preventDefault();
-                } else if (scrollTop + clientHeight >= scrollHeight && deltaY > 0) {
-                    e.preventDefault();
-                }
-            } else if (isKeyboardOpen) {
-                // iOS/Desktop con teclado
-                const element = e.currentTarget as HTMLElement;
-                const { scrollTop, scrollHeight, clientHeight } = element;
-                const touch = e.touches[0];
-                const deltaY = touchStart ? touchStart.y - touch.clientY : 0;
+            const element = e.currentTarget as HTMLElement;
+            const { scrollTop, scrollHeight, clientHeight } = element;
+            const touch = e.touches[0];
+            const deltaY = touch.clientY - touchStart.y;
 
-                if (scrollTop === 0 && deltaY < 0) {
-                    e.preventDefault();
-                } else if (scrollTop + clientHeight >= scrollHeight && deltaY > 0) {
-                    e.preventDefault();
-                }
-            } else {
-                // Lógica original para otros casos
-                const element = e.currentTarget as HTMLElement;
-                const { scrollTop, scrollHeight, clientHeight } = element;
-                const touch = e.touches[0];
-                const deltaY = touchStart ? touchStart.y - touch.clientY : 0;
+            // Determinar dirección del scroll
+            const scrollingUp = deltaY > 0;
+            const scrollingDown = deltaY < 0;
 
-                if (scrollTop === 0 && deltaY < 0) {
-                    e.preventDefault();
-                }
+            // Prevenir bounce en los límites
+            const atTop = scrollTop <= 0;
+            const atBottom = scrollTop + clientHeight >= scrollHeight;
 
-                if (scrollTop + clientHeight >= scrollHeight && deltaY > 0) {
-                    e.preventDefault();
-                }
+            if ((atTop && scrollingUp) || (atBottom && scrollingDown)) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // Marcar como scrolling si hay movimiento significativo
+            const threshold = 5;
+            if (Math.abs(deltaY) > threshold || Math.abs(touch.clientX - touchStart.x) > threshold) {
+                setIsScrolling(true);
             }
         };
 
+        const handleTouchEnd = () => {
+            setTimeout(() => {
+                setIsScrolling(false);
+                setTouchStart(null);
+            }, 100);
+        };
+
+        scrollableElement.addEventListener('touchstart', handleTouchStart, { passive: true });
         scrollableElement.addEventListener('touchmove', handleTouchMove, { passive: false });
+        scrollableElement.addEventListener('touchend', handleTouchEnd, { passive: true });
 
         return () => {
+            scrollableElement.removeEventListener('touchstart', handleTouchStart);
             scrollableElement.removeEventListener('touchmove', handleTouchMove);
+            scrollableElement.removeEventListener('touchend', handleTouchEnd);
         };
-    }, [isOpen, isKeyboardOpen, touchStart, isAndroid]);
+    }, [isOpen, touchStart]);
 
-    // Manejo del foco del input - MODIFICADO PARA ANDROID
-    useEffect(() => {
-        if (isOpen && inputRef.current) {
-            if (isAndroid) {
-                // ANDROID: NO autofocar el input al abrir
-                // Solo focar si el usuario explícitamente toca el input
-                return;
-            } else {
-                // iOS/Desktop: comportamiento original
-                if (isKeyboardOpen) {
-                    setTimeout(() => {
-                        inputRef.current?.focus();
-                    }, 100);
-                } else {
-                    inputRef.current.focus();
-                }
-            }
-        }
-    }, [isOpen, isKeyboardOpen, isAndroid, shouldFocusInput]);
-
+    // Resto de la lógica del componente...
     const handleSelect = (optionValue: string) => {
         if (!isScrolling) {
             onChange(optionValue);
@@ -367,7 +385,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         }
     };
 
-    const handleTouchStart = (e: React.TouchEvent) => {
+    const handleTouchStartOption = (e: React.TouchEvent) => {
         const touch = e.touches[0];
         setTouchStart({
             x: touch.clientX,
@@ -377,26 +395,26 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         setIsScrolling(false);
     };
 
-    const handleTouchMove = (e: React.TouchEvent) => {
+    const handleTouchMoveOption = (e: React.TouchEvent) => {
         if (!touchStart) return;
 
         const touch = e.touches[0];
         const deltaX = Math.abs(touch.clientX - touchStart.x);
         const deltaY = Math.abs(touch.clientY - touchStart.y);
 
-        const threshold = isAndroid ? 8 : (isKeyboardOpen ? 5 : 10);
+        const threshold = isAndroid ? 8 : 10;
 
         if (deltaX > threshold || deltaY > threshold) {
             setIsScrolling(true);
         }
     };
 
-    const handleTouchEnd = (e: React.TouchEvent, optionValue: string) => {
+    const handleTouchEndOption = (e: React.TouchEvent, optionValue: string) => {
         if (!touchStart) return;
 
         const touchEndTime = Date.now();
         const touchDuration = touchEndTime - touchStart.time;
-        const maxDuration = isAndroid ? 300 : (isKeyboardOpen ? 500 : 300);
+        const maxDuration = 300;
 
         if (!isScrolling && touchDuration < maxDuration) {
             e.preventDefault();
@@ -416,59 +434,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         }
     };
 
-    // Manejar clic/focus en el input de búsqueda - MEJORADO CON SCROLL
-    const handleInputFocus = () => {
-        setInputFocused(true);
-        if (isAndroid) {
-            setShouldFocusInput(true);
-            // En Android, focar explícitamente cuando el usuario toca el input
-            setTimeout(() => {
-                inputRef.current?.focus();
-                // Hacer scroll suave hacia arriba para mejorar visibilidad
-                scrollDropdownUp();
-            }, 100);
-        } else {
-            // Para iOS y desktop también mejorar la visibilidad
-            setTimeout(() => {
-                scrollDropdownUp();
-            }, 300); // Dar tiempo para que aparezca el teclado
-        }
-    };
-
-    const handleInputBlur = () => {
-        setInputFocused(false);
-        // Restaurar posición original del dropdown
-        setTimeout(() => {
-            restoreDropdownPosition();
-        }, 100);
-    };
-
-    // Función para hacer scroll del dropdown hacia arriba
-    const scrollDropdownUp = () => {
-        if (dropdownRef.current) {
-            const dropdown = dropdownRef.current;
-            const rect = dropdown.getBoundingClientRect();
-            const viewportHeight = window.innerHeight;
-
-            // Si el dropdown está en la parte inferior, hacer scroll suave hacia arriba
-            if (rect.bottom > viewportHeight * 0.7) {
-                const scrollAmount = Math.min(120, rect.bottom - viewportHeight * 0.6);
-                window.scrollBy({
-                    top: -scrollAmount,
-                    behavior: 'smooth'
-                });
-            }
-        }
-    };
-
-    // Función para restaurar la posición original
-    const restoreDropdownPosition = () => {
-        // Solo restaurar si es necesario - esto es opcional
-        // En la mayoría de casos es mejor dejar la posición donde quedó
-    };
-
     return (
         <div className="relative" ref={dropdownRef}>
+            {/* Trigger button */}
             <div
                 onClick={handleToggle}
                 onTouchEnd={(e) => {
@@ -489,27 +457,30 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
             {isOpen && !disabled && (
                 <>
-                    {/* Overlay */}
+                    {/* Overlay mejorado para Android */}
                     <div
-                        className={`fixed inset-0 z-40 md:hidden ${isAndroid ? 'bg-black/15' : (isKeyboardOpen ? 'bg-black/10' : 'bg-black/20')
+                        className={`fixed inset-0 z-40 md:hidden ${isAndroid ? 'bg-black/25' : 'bg-black/20'
                             }`}
                         onClick={() => {
                             setIsOpen(false);
                             setShouldFocusInput(false);
                         }}
                         onTouchMove={(e) => {
-                            if (!isKeyboardOpen && !isAndroid) {
-                                e.preventDefault();
-                            }
+                            // Prevenir completamente el touchmove en el overlay
+                            e.preventDefault();
+                            e.stopPropagation();
+                        }}
+                        style={{
+                            touchAction: 'none',
+                            overscrollBehavior: 'none'
                         }}
                     />
 
                     {/* Dropdown */}
                     <div className={`absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden ${(isKeyboardOpen && !isAndroid)
-                        ? 'fixed top-4 left-4 right-4 z-[9999] max-h-[40vh]'
-                        : 'max-h-60 sm:max-h-64'
+                            ? 'fixed top-4 left-4 right-4 z-[9999] max-h-[40vh]'
+                            : 'max-h-60 sm:max-h-64'
                         }`}>
-
                         {/* Campo de búsqueda */}
                         <div className="p-2 border-b border-gray-200 bg-white sticky top-0 z-10">
                             <input
@@ -517,26 +488,15 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                onFocus={handleInputFocus}
-                                onBlur={handleInputBlur}
                                 placeholder="Buscar..."
-                                className={`w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm sm:text-base transition-all ${inputFocused ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
-                                onClick={(e) => e.stopPropagation()}
-                                onTouchStart={(e) => {
-                                    e.stopPropagation();
-                                    if (isAndroid) {
-                                        handleInputFocus();
-                                    }
-                                }}
-                                inputMode="text"
-                                autoComplete="off"
+                                className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm sm:text-base"
                                 style={{ fontSize: '16px' }}
-                                // En Android, no autoenfocar
-                                autoFocus={!isAndroid && (isKeyboardOpen || !isAndroid)}
+                                autoComplete="off"
+                                autoFocus={!isAndroid}
                             />
                         </div>
 
-                        {/* Lista scrolleable */}
+                        {/* Lista scrolleable con prevención de propagación mejorada */}
                         <div
                             ref={scrollableRef}
                             className={`overflow-y-auto ${(isKeyboardOpen && !isAndroid) ? 'max-h-[30vh]' : 'max-h-48 sm:max-h-52'
@@ -544,26 +504,19 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                             style={{
                                 WebkitOverflowScrolling: 'touch',
                                 overscrollBehavior: 'contain',
-                                touchAction: isAndroid ? 'pan-y' : (isKeyboardOpen ? 'pan-y' : (isSamsungBrowser ? 'auto' : 'pan-y')),
+                                touchAction: 'pan-y',
                                 scrollBehavior: 'smooth',
-                                ...((isKeyboardOpen && !isAndroid) && {
-                                    position: 'relative',
-                                    zIndex: 1,
-                                    isolation: 'isolate'
-                                })
+                                isolation: 'isolate'
                             }}
                             onTouchStart={(e) => {
-                                handleTouchStart(e);
                                 e.stopPropagation();
                             }}
                             onTouchMove={(e) => {
-                                handleTouchMove(e);
                                 e.stopPropagation();
-                                if (!isKeyboardOpen && !isAndroid && isSamsungBrowser) {
-                                    e.preventDefault();
-                                }
                             }}
-                            tabIndex={-1}
+                            onTouchEnd={(e) => {
+                                e.stopPropagation();
+                            }}
                         >
                             {filteredOptions.length > 0 ? (
                                 filteredOptions.map((option) => (
@@ -571,19 +524,19 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                         key={option.value}
                                         onClick={() => handleSelect(option.value)}
                                         onTouchStart={(e) => {
-                                            handleTouchStart(e);
+                                            handleTouchStartOption(e);
                                             e.stopPropagation();
                                         }}
                                         onTouchMove={(e) => {
-                                            handleTouchMove(e);
+                                            handleTouchMoveOption(e);
                                             e.stopPropagation();
                                         }}
                                         onTouchEnd={(e) => {
-                                            handleTouchEnd(e, option.value);
+                                            handleTouchEndOption(e, option.value);
                                         }}
                                         className={`px-3 sm:px-4 py-3 sm:py-4 cursor-pointer transition-colors text-sm sm:text-base select-none ${option.value === value
-                                            ? 'bg-green-50 text-gray-900 font-medium'
-                                            : 'hover:bg-gray-50 text-gray-700 active:bg-blue-50'
+                                                ? 'bg-green-50 text-gray-900 font-medium'
+                                                : 'hover:bg-gray-50 text-gray-700 active:bg-blue-50'
                                             }`}
                                         style={{
                                             touchAction: 'manipulation',

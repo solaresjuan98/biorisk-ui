@@ -112,6 +112,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     // Detectar Samsung Internet Browser
     const isSamsungBrowser = typeof navigator !== 'undefined' && 
         /SamsungBrowser/i.test(navigator.userAgent);
+    
+    // Detectar si el teclado virtual está activo
+    const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
+    const [initialViewportHeight, setInitialViewportHeight] = useState(0);
 
     const filteredOptions = options.filter(option =>
         option.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -122,9 +126,18 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     // Prevenir scroll de la página cuando el dropdown está abierto
     useEffect(() => {
         if (isOpen) {
-            // Para Samsung Browser, necesitamos un manejo más agresivo
-            if (isSamsungBrowser) {
-                // Prevenir todos los eventos de scroll y touch en el body
+            // Manejo especial cuando el teclado está abierto
+            if (isKeyboardOpen) {
+                // Cuando el teclado está abierto, usar estrategia menos agresiva
+                document.body.style.touchAction = 'none';
+                document.documentElement.style.touchAction = 'none';
+                
+                return () => {
+                    document.body.style.touchAction = '';
+                    document.documentElement.style.touchAction = '';
+                };
+            } else if (isSamsungBrowser) {
+                // Para Samsung Browser sin teclado
                 const preventDefault = (e: Event) => e.preventDefault();
                 
                 document.body.style.overflow = 'hidden';
@@ -145,7 +158,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     document.removeEventListener('wheel', preventDefault);
                 };
             } else {
-                // Comportamiento normal para otros navegadores
+                // Comportamiento normal para otros navegadores sin teclado
                 const originalStyle = window.getComputedStyle(document.body).overflow;
                 document.body.style.overflow = 'hidden';
                 
@@ -154,7 +167,29 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 };
             }
         }
-    }, [isOpen, isSamsungBrowser]);
+    }, [isOpen, isSamsungBrowser, isKeyboardOpen]);
+
+    useEffect(() => {
+        // Guardar la altura inicial del viewport
+        setInitialViewportHeight(window.innerHeight);
+        
+        // Detectar cambios en el viewport (teclado virtual)
+        const handleResize = () => {
+            const currentHeight = window.innerHeight;
+            const heightDifference = initialViewportHeight - currentHeight;
+            
+            // Si la diferencia es mayor a 150px, probablemente el teclado está abierto
+            setIsKeyboardOpen(heightDifference > 150);
+        };
+
+        window.addEventListener('resize', handleResize);
+        window.addEventListener('orientationchange', handleResize);
+        
+        return () => {
+            window.removeEventListener('resize', handleResize);
+            window.removeEventListener('orientationchange', handleResize);
+        };
+    }, [initialViewportHeight]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -320,7 +355,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     />
                     
                     {/* Dropdown */}
-                    <div className="absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden">
+                    <div className={`absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden ${
+                        isKeyboardOpen ? 'fixed top-4 left-4 right-4 z-[9999]' : ''
+                    }`}>
                         {/* Campo de búsqueda */}
                         <div className="p-2 border-b border-gray-200">
                             <input
@@ -332,35 +369,44 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                 className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm sm:text-base"
                                 onClick={(e) => e.stopPropagation()}
                                 onTouchStart={(e) => e.stopPropagation()}
+                                inputMode="text"
+                                autoComplete="off"
                             />
                         </div>
                         
                         {/* Lista scrolleable */}
                         <div 
                             ref={scrollableRef}
-                            className="overflow-y-auto max-h-60 sm:max-h-64"
+                            className={`overflow-y-auto ${
+                                isKeyboardOpen ? 'max-h-40' : 'max-h-60 sm:max-h-64'
+                            }`}
                             style={{ 
                                 WebkitOverflowScrolling: 'touch',
                                 overscrollBehavior: 'contain',
-                                touchAction: isSamsungBrowser ? 'auto' : 'pan-y',
+                                touchAction: (isSamsungBrowser && !isKeyboardOpen) ? 'auto' : 'pan-y',
                                 // Propiedades adicionales para Samsung Browser
-                                ...(isSamsungBrowser && {
+                                ...((isSamsungBrowser && !isKeyboardOpen) && {
                                     isolation: 'isolate',
                                     transform: 'translateZ(0)',
                                     willChange: 'scroll-position'
+                                }),
+                                // Cuando el teclado está abierto, usar posición más estable
+                                ...(isKeyboardOpen && {
+                                    position: 'relative',
+                                    zIndex: 10000
                                 })
                             }}
                             onTouchStart={(e) => {
                                 e.stopPropagation();
-                                // Para Samsung Browser, forzar el foco en el elemento scrolleable
-                                if (isSamsungBrowser && scrollableRef.current) {
+                                // Para Samsung Browser sin teclado, forzar el foco en el elemento scrolleable
+                                if (isSamsungBrowser && !isKeyboardOpen && scrollableRef.current) {
                                     scrollableRef.current.focus();
                                 }
                             }}
                             onTouchMove={(e) => {
                                 e.stopPropagation();
-                                // En Samsung Browser, asegurar que el scroll se mantenga en el elemento
-                                if (isSamsungBrowser) {
+                                // En Samsung Browser sin teclado, scroll manual
+                                if (isSamsungBrowser && !isKeyboardOpen) {
                                     e.preventDefault();
                                     const touch = e.touches[0];
                                     const element = scrollableRef.current;
@@ -371,7 +417,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                 }
                             }}
                             // Hacer el elemento focusable para Samsung Browser
-                            tabIndex={isSamsungBrowser ? 0 : -1}
+                            tabIndex={(isSamsungBrowser && !isKeyboardOpen) ? 0 : -1}
                         >
                             {filteredOptions.length > 0 ? (
                                 filteredOptions.map((option) => (

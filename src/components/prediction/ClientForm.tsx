@@ -81,8 +81,7 @@ interface ClientFormProps {
     resetValidation?: () => void;
     setEndpointUrl?: (url: string) => void;
 }
-
-// Componente de Select Personalizado
+// Componente de Select Personalizado - FIX DEFINITIVO PARA MÓVILES
 interface CustomSelectProps {
     value: string;
     onChange: (value: string) => void;
@@ -109,6 +108,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     // Estados para detectar si el usuario está haciendo scroll vs tap
     const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
     const [isScrolling, setIsScrolling] = useState(false);
+    
+    // Detectar Samsung Internet Browser
+    const isSamsungBrowser = typeof navigator !== 'undefined' && 
+        /SamsungBrowser/i.test(navigator.userAgent);
 
     const filteredOptions = options.filter(option =>
         option.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -119,15 +122,39 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     // Prevenir scroll de la página cuando el dropdown está abierto
     useEffect(() => {
         if (isOpen) {
-            // Prevenir scroll del body en móviles
-            const originalStyle = window.getComputedStyle(document.body).overflow;
-            document.body.style.overflow = 'hidden';
-            
-            return () => {
-                document.body.style.overflow = originalStyle;
-            };
+            // Para Samsung Browser, necesitamos un manejo más agresivo
+            if (isSamsungBrowser) {
+                // Prevenir todos los eventos de scroll y touch en el body
+                const preventDefault = (e: Event) => e.preventDefault();
+                
+                document.body.style.overflow = 'hidden';
+                document.body.style.position = 'fixed';
+                document.body.style.width = '100%';
+                document.body.style.height = '100%';
+                
+                document.addEventListener('touchmove', preventDefault, { passive: false });
+                document.addEventListener('wheel', preventDefault, { passive: false });
+                
+                return () => {
+                    document.body.style.overflow = '';
+                    document.body.style.position = '';
+                    document.body.style.width = '';
+                    document.body.style.height = '';
+                    
+                    document.removeEventListener('touchmove', preventDefault);
+                    document.removeEventListener('wheel', preventDefault);
+                };
+            } else {
+                // Comportamiento normal para otros navegadores
+                const originalStyle = window.getComputedStyle(document.body).overflow;
+                document.body.style.overflow = 'hidden';
+                
+                return () => {
+                    document.body.style.overflow = originalStyle;
+                };
+            }
         }
-    }, [isOpen]);
+    }, [isOpen, isSamsungBrowser]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent | TouchEvent) => {
@@ -235,6 +262,28 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         setTimeout(() => setIsScrolling(false), 100);
     };
 
+    // Manejar scroll manual para Samsung Browser
+    const handleManualScroll = (e: React.TouchEvent) => {
+        if (!isSamsungBrowser || !touchStart || !scrollableRef.current) return;
+        
+        const touch = e.touches[0];
+        const deltaY = touchStart.y - touch.clientY;
+        const element = scrollableRef.current;
+        
+        // Scroll manual directo
+        element.scrollTop = Math.max(0, Math.min(
+            element.scrollHeight - element.clientHeight,
+            element.scrollTop + deltaY
+        ));
+        
+        // Actualizar touchStart para el siguiente movimiento
+        setTouchStart({
+            x: touch.clientX,
+            y: touch.clientY,
+            time: touchStart.time
+        });
+    };
+
     const handleToggle = () => {
         if (!disabled) {
             setIsOpen(!isOpen);
@@ -293,19 +342,67 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                             style={{ 
                                 WebkitOverflowScrolling: 'touch',
                                 overscrollBehavior: 'contain',
-                                touchAction: 'pan-y'
+                                touchAction: isSamsungBrowser ? 'auto' : 'pan-y',
+                                // Propiedades adicionales para Samsung Browser
+                                ...(isSamsungBrowser && {
+                                    isolation: 'isolate',
+                                    transform: 'translateZ(0)',
+                                    willChange: 'scroll-position'
+                                })
                             }}
-                            onTouchStart={(e) => e.stopPropagation()}
-                            onTouchMove={(e) => e.stopPropagation()}
+                            onTouchStart={(e) => {
+                                e.stopPropagation();
+                                // Para Samsung Browser, forzar el foco en el elemento scrolleable
+                                if (isSamsungBrowser && scrollableRef.current) {
+                                    scrollableRef.current.focus();
+                                }
+                            }}
+                            onTouchMove={(e) => {
+                                e.stopPropagation();
+                                // En Samsung Browser, asegurar que el scroll se mantenga en el elemento
+                                if (isSamsungBrowser) {
+                                    e.preventDefault();
+                                    const touch = e.touches[0];
+                                    const element = scrollableRef.current;
+                                    if (element && touchStart) {
+                                        const deltaY = touchStart.y - touch.clientY;
+                                        element.scrollTop += deltaY;
+                                    }
+                                }
+                            }}
+                            // Hacer el elemento focusable para Samsung Browser
+                            tabIndex={isSamsungBrowser ? 0 : -1}
                         >
                             {filteredOptions.length > 0 ? (
                                 filteredOptions.map((option) => (
                                     <div
                                         key={option.value}
                                         onClick={() => handleSelect(option.value)}
-                                        onTouchStart={handleTouchStart}
-                                        onTouchMove={handleTouchMove}
-                                        onTouchEnd={(e) => handleTouchEnd(e, option.value)}
+                                        onTouchStart={(e) => {
+                                            handleTouchStart(e);
+                                            if (isSamsungBrowser) {
+                                                e.stopPropagation();
+                                            }
+                                        }}
+                                        onTouchMove={(e) => {
+                                            if (isSamsungBrowser) {
+                                                handleManualScroll(e);
+                                                e.preventDefault();
+                                                e.stopPropagation();
+                                            } else {
+                                                handleTouchMove(e);
+                                            }
+                                        }}
+                                        onTouchEnd={(e) => {
+                                            if (!isSamsungBrowser) {
+                                                handleTouchEnd(e, option.value);
+                                            } else {
+                                                // En Samsung Browser, manejo más simple
+                                                if (!isScrolling) {
+                                                    handleSelect(option.value);
+                                                }
+                                            }
+                                        }}
                                         className={`px-3 sm:px-4 py-3 sm:py-4 cursor-pointer transition-colors text-sm sm:text-base select-none ${option.value === value
                                             ? 'bg-green-50 text-gray-900 font-medium'
                                             : 'hover:bg-gray-50 text-gray-700 active:bg-blue-50'

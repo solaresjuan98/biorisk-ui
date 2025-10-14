@@ -81,7 +81,7 @@ interface ClientFormProps {
     resetValidation?: () => void;
     setEndpointUrl?: (url: string) => void;
 }
-// Componente de Select Personalizado - FIX DEFINITIVO PARA MÓVILES
+
 // Componente de Select Personalizado - CORREGIDO PARA ANDROID
 interface CustomSelectProps {
     value: string;
@@ -126,25 +126,36 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
     const selectedOption = options.find(opt => opt.value === value);
 
-    // Prevenir scroll de la página cuando el dropdown está abierto - MEJORADO PARA ANDROID
+    // Prevenir scroll de la página cuando el dropdown está abierto - CORREGIDO PARA ANDROID
     useEffect(() => {
         if (isOpen) {
             if (isAndroid) {
-                // ANDROID: Comportamiento específico - no autofocar input, permitir scroll manual
+                // ANDROID: Enfoque más suave - solo prevenir overflow sin position fixed
                 const originalOverflow = document.body.style.overflow;
-                const originalPosition = document.body.style.position;
+                const originalTouchAction = document.body.style.touchAction;
                 
-                // Fijar body pero no prevenir todos los eventos
+                // Solo prevenir scroll del body, mantener posición
                 document.body.style.overflow = 'hidden';
-                document.body.style.position = 'fixed';
-                document.body.style.width = '100%';
-                document.body.style.top = `-${window.scrollY}px`;
+                document.body.style.touchAction = 'none';
+                
+                // Prevenir eventos de scroll solo en el document, no en el dropdown
+                const preventScroll = (e: TouchEvent) => {
+                    // Solo prevenir si el touch no es dentro del dropdown
+                    const target = e.target as Element;
+                    const isDropdownTouch = dropdownRef.current?.contains(target);
+                    if (!isDropdownTouch) {
+                        e.preventDefault();
+                    }
+                };
+
+                document.addEventListener('touchmove', preventScroll, { passive: false });
+                document.addEventListener('touchstart', preventScroll, { passive: false });
 
                 return () => {
                     document.body.style.overflow = originalOverflow;
-                    document.body.style.position = originalPosition;
-                    document.body.style.width = '';
-                    document.body.style.top = '';
+                    document.body.style.touchAction = originalTouchAction;
+                    document.removeEventListener('touchmove', preventScroll);
+                    document.removeEventListener('touchstart', preventScroll);
                 };
             } else if (isKeyboardOpen) {
                 // iOS/Desktop CON TECLADO: Comportamiento original mejorado

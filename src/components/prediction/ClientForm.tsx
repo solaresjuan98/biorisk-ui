@@ -82,7 +82,7 @@ interface ClientFormProps {
     setEndpointUrl?: (url: string) => void;
 }
 // Componente de Select Personalizado - FIX DEFINITIVO PARA MÓVILES
-// Componente de Select Personalizado - ARREGLADO PARA SCROLL CON TECLADO VIRTUAL
+// Componente de Select Personalizado - CORREGIDO PARA ANDROID
 interface CustomSelectProps {
     value: string;
     onChange: (value: string) => void;
@@ -110,13 +110,15 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
     const [isScrolling, setIsScrolling] = useState(false);
 
-    // Detectar Samsung Internet Browser
-    const isSamsungBrowser = typeof navigator !== 'undefined' &&
-        /SamsungBrowser/i.test(navigator.userAgent);
+    // Detectar plataforma específica
+    const isAndroid = typeof navigator !== 'undefined' && /Android/i.test(navigator.userAgent);
+    const isIOS = typeof navigator !== 'undefined' && /iPad|iPhone|iPod/.test(navigator.userAgent);
+    const isSamsungBrowser = typeof navigator !== 'undefined' && /SamsungBrowser/i.test(navigator.userAgent);
 
-    // Detectar si el teclado virtual está activo
+    // Detectar si el teclado virtual está activo (solo para iOS y desktop)
     const [isKeyboardOpen, setIsKeyboardOpen] = useState(false);
     const [initialViewportHeight, setInitialViewportHeight] = useState(0);
+    const [shouldFocusInput, setShouldFocusInput] = useState(false);
 
     const filteredOptions = options.filter(option =>
         option.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -124,18 +126,33 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
     const selectedOption = options.find(opt => opt.value === value);
 
-    // Prevenir scroll de la página cuando el dropdown está abierto - MEJORADO
+    // Prevenir scroll de la página cuando el dropdown está abierto - MEJORADO PARA ANDROID
     useEffect(() => {
         if (isOpen) {
-            if (isKeyboardOpen) {
-                // ESTRATEGIA MEJORADA: Cuando el teclado está abierto, solo prevenir scroll del body
-                // pero permitir scroll interno del dropdown
+            if (isAndroid) {
+                // ANDROID: Comportamiento específico - no autofocar input, permitir scroll manual
+                const originalOverflow = document.body.style.overflow;
+                const originalPosition = document.body.style.position;
+                
+                // Fijar body pero no prevenir todos los eventos
+                document.body.style.overflow = 'hidden';
+                document.body.style.position = 'fixed';
+                document.body.style.width = '100%';
+                document.body.style.top = `-${window.scrollY}px`;
+
+                return () => {
+                    document.body.style.overflow = originalOverflow;
+                    document.body.style.position = originalPosition;
+                    document.body.style.width = '';
+                    document.body.style.top = '';
+                };
+            } else if (isKeyboardOpen) {
+                // iOS/Desktop CON TECLADO: Comportamiento original mejorado
                 const originalOverflow = document.body.style.overflow;
                 const originalPosition = document.body.style.position;
                 const originalHeight = document.body.style.height;
                 const originalWidth = document.body.style.width;
 
-                // Solo fijar el body, no prevenir todos los touch events
                 document.body.style.overflow = 'hidden';
                 document.body.style.position = 'fixed';
                 document.body.style.height = '100vh';
@@ -150,9 +167,8 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     document.body.style.top = '';
                 };
             } else if (isSamsungBrowser) {
-                // Para Samsung Browser sin teclado - comportamiento más específico
+                // Samsung Browser sin teclado
                 const preventDefault = (e: Event) => {
-                    // Solo prevenir si el target no es del dropdown
                     const target = e.target as Element;
                     const isDropdownElement = dropdownRef.current?.contains(target);
                     if (!isDropdownElement) {
@@ -178,7 +194,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     document.removeEventListener('wheel', preventDefault);
                 };
             } else {
-                // Comportamiento normal para otros navegadores sin teclado
+                // Otros navegadores sin teclado
                 const originalStyle = window.getComputedStyle(document.body).overflow;
                 document.body.style.overflow = 'hidden';
 
@@ -187,34 +203,26 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 };
             }
         }
-    }, [isOpen, isSamsungBrowser, isKeyboardOpen]);
+    }, [isOpen, isSamsungBrowser, isKeyboardOpen, isAndroid]);
 
-    // MEJORADO: Detección más precisa del teclado virtual
+    // Detección del teclado virtual - DESHABILITADO PARA ANDROID
     useEffect(() => {
-        // Guardar la altura inicial del viewport
+        if (isAndroid) {
+            // En Android no detectamos el teclado automáticamente
+            return;
+        }
+
+        // Solo para iOS y desktop
         const initialHeight = window.innerHeight;
         setInitialViewportHeight(initialHeight);
 
-        // Detectar cambios en el viewport (teclado virtual)
         const handleResize = () => {
             const currentHeight = window.innerHeight;
             const heightDifference = initialHeight - currentHeight;
-
-            // Considerar que el teclado está abierto si la diferencia es mayor a 150px
-            // y la nueva altura es menor que la inicial
             const keyboardOpen = heightDifference > 150 && currentHeight < initialHeight;
             setIsKeyboardOpen(keyboardOpen);
-
-            // Log para debugging (puedes quitar esto en producción)
-            console.log('Viewport change:', {
-                initial: initialHeight,
-                current: currentHeight,
-                difference: heightDifference,
-                keyboardOpen
-            });
         };
 
-        // Usar un debounce para evitar múltiples llamadas
         let resizeTimeout: NodeJS.Timeout;
         const debouncedResize = () => {
             clearTimeout(resizeTimeout);
@@ -224,7 +232,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         window.addEventListener('resize', debouncedResize);
         window.addEventListener('orientationchange', debouncedResize);
 
-        // También escuchar eventos de visual viewport si está disponible
         if ('visualViewport' in window) {
             const visualViewport = window.visualViewport!;
             visualViewport.addEventListener('resize', debouncedResize);
@@ -242,13 +249,14 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             window.removeEventListener('resize', debouncedResize);
             window.removeEventListener('orientationchange', debouncedResize);
         };
-    }, []);
+    }, [isAndroid]);
 
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent | TouchEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
                 setIsOpen(false);
                 setSearchTerm('');
+                setShouldFocusInput(false);
             }
         };
 
@@ -261,35 +269,41 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         };
     }, []);
 
-    // MEJORADO: Manejar scroll dentro del dropdown con mejor lógica para teclado
+    // Manejar scroll dentro del dropdown
     useEffect(() => {
         const scrollableElement = scrollableRef.current;
         if (!scrollableElement) return;
 
         const handleTouchMove = (e: TouchEvent) => {
-            if (isKeyboardOpen) {
-                // CON TECLADO ABIERTO: Permitir scroll normal del dropdown
-                // Solo prevenir el bounce/overscroll en los límites
+            if (isAndroid) {
+                // ANDROID: Lógica simplificada para scroll
                 const element = e.currentTarget as HTMLElement;
                 const { scrollTop, scrollHeight, clientHeight } = element;
-
                 const touch = e.touches[0];
                 const deltaY = touchStart ? touchStart.y - touch.clientY : 0;
 
-                // Prevenir overscroll solo en los límites
+                // Prevenir overscroll en los límites
                 if (scrollTop === 0 && deltaY < 0) {
-                    // En el tope y scrolleando hacia arriba
                     e.preventDefault();
                 } else if (scrollTop + clientHeight >= scrollHeight && deltaY > 0) {
-                    // En el fondo y scrolleando hacia abajo
                     e.preventDefault();
                 }
-                // Si no está en los límites, permitir scroll normal
-            } else {
-                // SIN TECLADO: Lógica original
+            } else if (isKeyboardOpen) {
+                // iOS/Desktop con teclado
                 const element = e.currentTarget as HTMLElement;
                 const { scrollTop, scrollHeight, clientHeight } = element;
+                const touch = e.touches[0];
+                const deltaY = touchStart ? touchStart.y - touch.clientY : 0;
 
+                if (scrollTop === 0 && deltaY < 0) {
+                    e.preventDefault();
+                } else if (scrollTop + clientHeight >= scrollHeight && deltaY > 0) {
+                    e.preventDefault();
+                }
+            } else {
+                // Lógica original para otros casos
+                const element = e.currentTarget as HTMLElement;
+                const { scrollTop, scrollHeight, clientHeight } = element;
                 const touch = e.touches[0];
                 const deltaY = touchStart ? touchStart.y - touch.clientY : 0;
 
@@ -308,31 +322,37 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         return () => {
             scrollableElement.removeEventListener('touchmove', handleTouchMove);
         };
-    }, [isOpen, isKeyboardOpen, touchStart]);
+    }, [isOpen, isKeyboardOpen, touchStart, isAndroid]);
 
+    // Manejo del foco del input - MODIFICADO PARA ANDROID
     useEffect(() => {
         if (isOpen && inputRef.current) {
-            // Con teclado abierto, dar un pequeño delay para el foco
-            if (isKeyboardOpen) {
-                setTimeout(() => {
-                    inputRef.current?.focus();
-                }, 100);
+            if (isAndroid) {
+                // ANDROID: NO autofocar el input al abrir
+                // Solo focar si el usuario explícitamente toca el input
+                return;
             } else {
-                inputRef.current.focus();
+                // iOS/Desktop: comportamiento original
+                if (isKeyboardOpen) {
+                    setTimeout(() => {
+                        inputRef.current?.focus();
+                    }, 100);
+                } else {
+                    inputRef.current.focus();
+                }
             }
         }
-    }, [isOpen, isKeyboardOpen]);
+    }, [isOpen, isKeyboardOpen, isAndroid, shouldFocusInput]);
 
     const handleSelect = (optionValue: string) => {
-        // Solo seleccionar si no está haciendo scroll
         if (!isScrolling) {
             onChange(optionValue);
             setIsOpen(false);
             setSearchTerm('');
+            setShouldFocusInput(false);
         }
     };
 
-    // Función para manejar el inicio del toque - MEJORADO
     const handleTouchStart = (e: React.TouchEvent) => {
         const touch = e.touches[0];
         setTouchStart({
@@ -343,7 +363,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         setIsScrolling(false);
     };
 
-    // Función para detectar si el usuario está haciendo scroll - MEJORADO
     const handleTouchMove = (e: React.TouchEvent) => {
         if (!touchStart) return;
 
@@ -351,23 +370,19 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         const deltaX = Math.abs(touch.clientX - touchStart.x);
         const deltaY = Math.abs(touch.clientY - touchStart.y);
 
-        // AJUSTADO: Con teclado abierto, ser más permisivo con el movimiento
-        const threshold = isKeyboardOpen ? 5 : 10;
+        const threshold = isAndroid ? 8 : (isKeyboardOpen ? 5 : 10);
 
         if (deltaX > threshold || deltaY > threshold) {
             setIsScrolling(true);
         }
     };
 
-    // Función para manejar el final del toque - MEJORADO
     const handleTouchEnd = (e: React.TouchEvent, optionValue: string) => {
         if (!touchStart) return;
 
         const touchEndTime = Date.now();
         const touchDuration = touchEndTime - touchStart.time;
-
-        // AJUSTADO: Con teclado abierto, ser más permisivo con el tiempo
-        const maxDuration = isKeyboardOpen ? 500 : 300;
+        const maxDuration = isAndroid ? 300 : (isKeyboardOpen ? 500 : 300);
 
         if (!isScrolling && touchDuration < maxDuration) {
             e.preventDefault();
@@ -382,6 +397,18 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const handleToggle = () => {
         if (!disabled) {
             setIsOpen(!isOpen);
+            setShouldFocusInput(false);
+        }
+    };
+
+    // Manejar clic/focus en el input de búsqueda - NUEVO PARA ANDROID
+    const handleInputFocus = () => {
+        if (isAndroid) {
+            setShouldFocusInput(true);
+            // En Android, focar explícitamente cuando el usuario toca el input
+            setTimeout(() => {
+                inputRef.current?.focus();
+            }, 100);
         }
     };
 
@@ -407,56 +434,63 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
             {isOpen && !disabled && (
                 <>
-                    {/* Overlay - MEJORADO para teclado */}
+                    {/* Overlay */}
                     <div
-                        className={`fixed inset-0 z-40 md:hidden ${isKeyboardOpen ? 'bg-black/10' : 'bg-black/20'
+                        className={`fixed inset-0 z-40 md:hidden ${isAndroid ? 'bg-black/15' : (isKeyboardOpen ? 'bg-black/10' : 'bg-black/20')
                             }`}
-                        onClick={() => setIsOpen(false)}
+                        onClick={() => {
+                            setIsOpen(false);
+                            setShouldFocusInput(false);
+                        }}
                         onTouchMove={(e) => {
-                            // Con teclado abierto, solo prevenir si no es scroll del dropdown
-                            if (!isKeyboardOpen) {
+                            if (!isKeyboardOpen && !isAndroid) {
                                 e.preventDefault();
                             }
                         }}
                     />
 
-                    {/* Dropdown - MEJORADO para teclado */}
-                    <div className={`absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden ${isKeyboardOpen
+                    {/* Dropdown */}
+                    <div className={`absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden ${(isKeyboardOpen && !isAndroid)
                             ? 'fixed top-4 left-4 right-4 z-[9999] max-h-[40vh]'
                             : 'max-h-60 sm:max-h-64'
                         }`}>
-                        {/* Campo de búsqueda - MEJORADO */}
+                        
+                        {/* Campo de búsqueda */}
                         <div className="p-2 border-b border-gray-200 bg-white sticky top-0 z-10">
                             <input
                                 ref={inputRef}
                                 type="text"
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
+                                onFocus={handleInputFocus}
                                 placeholder="Buscar..."
                                 className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 rounded-md sm:rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 text-gray-900 text-sm sm:text-base"
                                 onClick={(e) => e.stopPropagation()}
-                                onTouchStart={(e) => e.stopPropagation()}
+                                onTouchStart={(e) => {
+                                    e.stopPropagation();
+                                    if (isAndroid) {
+                                        handleInputFocus();
+                                    }
+                                }}
                                 inputMode="text"
                                 autoComplete="off"
-                                // NUEVO: Evitar zoom en iOS
                                 style={{ fontSize: '16px' }}
+                                // En Android, no autoenfocar
+                                autoFocus={!isAndroid && (isKeyboardOpen || !isAndroid)}
                             />
                         </div>
 
-                        {/* Lista scrolleable - MEJORADO para teclado */}
+                        {/* Lista scrolleable */}
                         <div
                             ref={scrollableRef}
-                            className={`overflow-y-auto ${isKeyboardOpen ? 'max-h-[30vh]' : 'max-h-48 sm:max-h-52'
+                            className={`overflow-y-auto ${(isKeyboardOpen && !isAndroid) ? 'max-h-[30vh]' : 'max-h-48 sm:max-h-52'
                                 }`}
                             style={{
                                 WebkitOverflowScrolling: 'touch',
                                 overscrollBehavior: 'contain',
-                                // AJUSTADO: Con teclado abierto, usar touch action normal
-                                touchAction: isKeyboardOpen ? 'pan-y' : (isSamsungBrowser ? 'auto' : 'pan-y'),
-                                // Propiedades mejoradas para scroll suave
+                                touchAction: isAndroid ? 'pan-y' : (isKeyboardOpen ? 'pan-y' : (isSamsungBrowser ? 'auto' : 'pan-y')),
                                 scrollBehavior: 'smooth',
-                                ...(isKeyboardOpen && {
-                                    // Con teclado abierto, optimizar para scroll
+                                ...((isKeyboardOpen && !isAndroid) && {
                                     position: 'relative',
                                     zIndex: 1,
                                     isolation: 'isolate'
@@ -469,8 +503,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                             onTouchMove={(e) => {
                                 handleTouchMove(e);
                                 e.stopPropagation();
-                                // No prevenir default si el teclado está abierto
-                                if (!isKeyboardOpen && isSamsungBrowser) {
+                                if (!isKeyboardOpen && !isAndroid && isSamsungBrowser) {
                                     e.preventDefault();
                                 }
                             }}
@@ -500,7 +533,6 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                             touchAction: 'manipulation',
                                             userSelect: 'none',
                                             WebkitUserSelect: 'none',
-                                            // NUEVO: Mejorar la respuesta táctil
                                             WebkitTapHighlightColor: 'transparent'
                                         }}
                                     >
@@ -519,6 +551,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         </div>
     );
 };
+
 export const ClientForm: React.FC<ClientFormProps> = ({
     cui,
     setCui,

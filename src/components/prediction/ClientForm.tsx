@@ -83,9 +83,6 @@ interface ClientFormProps {
 }
 
 // Componente de Select Personalizado
-
-// Componente de Select Personalizado - VERSIÓN SIMPLE Y FUNCIONAL
-// Componente de Select Personalizado - FIX DEFINITIVO PARA MÓVILES
 interface CustomSelectProps {
     value: string;
     onChange: (value: string) => void;
@@ -108,6 +105,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const dropdownRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLInputElement>(null);
     const scrollableRef = useRef<HTMLDivElement>(null);
+    
+    // Estados para detectar si el usuario está haciendo scroll vs tap
+    const [touchStart, setTouchStart] = useState<{ x: number; y: number; time: number } | null>(null);
+    const [isScrolling, setIsScrolling] = useState(false);
 
     const filteredOptions = options.filter(option =>
         option.label.toLowerCase().includes(searchTerm.toLowerCase())
@@ -179,9 +180,59 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     }, [isOpen]);
 
     const handleSelect = (optionValue: string) => {
-        onChange(optionValue);
-        setIsOpen(false);
-        setSearchTerm('');
+        // Solo seleccionar si no está haciendo scroll
+        if (!isScrolling) {
+            onChange(optionValue);
+            setIsOpen(false);
+            setSearchTerm('');
+        }
+    };
+
+    // Función para manejar el inicio del toque
+    const handleTouchStart = (e: React.TouchEvent) => {
+        const touch = e.touches[0];
+        setTouchStart({
+            x: touch.clientX,
+            y: touch.clientY,
+            time: Date.now()
+        });
+        setIsScrolling(false);
+    };
+
+    // Función para detectar si el usuario está haciendo scroll
+    const handleTouchMove = (e: React.TouchEvent) => {
+        if (!touchStart) return;
+
+        const touch = e.touches[0];
+        const deltaX = Math.abs(touch.clientX - touchStart.x);
+        const deltaY = Math.abs(touch.clientY - touchStart.y);
+        
+        // Si se mueve más de 10px en cualquier dirección, considerarlo scroll
+        if (deltaX > 10 || deltaY > 10) {
+            setIsScrolling(true);
+        }
+    };
+
+    // Función para manejar el final del toque
+    const handleTouchEnd = (e: React.TouchEvent, optionValue: string) => {
+        if (!touchStart) return;
+
+        const touchEndTime = Date.now();
+        const touchDuration = touchEndTime - touchStart.time;
+        
+        // Solo seleccionar si:
+        // 1. No está haciendo scroll
+        // 2. El toque fue corto (menos de 300ms)
+        // 3. No se movió mucho
+        if (!isScrolling && touchDuration < 300) {
+            e.preventDefault();
+            e.stopPropagation();
+            handleSelect(optionValue);
+        }
+        
+        setTouchStart(null);
+        // Reset isScrolling después de un pequeño delay
+        setTimeout(() => setIsScrolling(false), 100);
     };
 
     const handleToggle = () => {
@@ -252,16 +303,18 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                     <div
                                         key={option.value}
                                         onClick={() => handleSelect(option.value)}
-                                        onTouchEnd={(e) => {
-                                            e.preventDefault();
-                                            e.stopPropagation();
-                                            handleSelect(option.value);
-                                        }}
-                                        className={`px-3 sm:px-4 py-3 sm:py-4 cursor-pointer transition-colors text-sm sm:text-base active:bg-blue-50 ${option.value === value
+                                        onTouchStart={handleTouchStart}
+                                        onTouchMove={handleTouchMove}
+                                        onTouchEnd={(e) => handleTouchEnd(e, option.value)}
+                                        className={`px-3 sm:px-4 py-3 sm:py-4 cursor-pointer transition-colors text-sm sm:text-base select-none ${option.value === value
                                             ? 'bg-green-50 text-gray-900 font-medium'
-                                            : 'hover:bg-gray-50 text-gray-700'
+                                            : 'hover:bg-gray-50 text-gray-700 active:bg-blue-50'
                                             }`}
-                                        style={{ touchAction: 'manipulation' }}
+                                        style={{ 
+                                            touchAction: 'manipulation',
+                                            userSelect: 'none',
+                                            WebkitUserSelect: 'none'
+                                        }}
                                     >
                                         {option.label}
                                     </div>

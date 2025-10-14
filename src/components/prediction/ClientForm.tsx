@@ -84,7 +84,15 @@ interface ClientFormProps {
 
 // Componente de Select Personalizado - CORREGIDO PARA ANDROID
 // Componente de Select Personalizado - CORREGIDO PARA ANDROID
-// Componente CustomSelect corregido para Android Chrome
+interface CustomSelectProps {
+    value: string;
+    onChange: (value: string) => void;
+    options: { value: string; label: string }[];
+    placeholder: string;
+    disabled?: boolean;
+    icon?: React.ReactNode;
+}
+
 const CustomSelect: React.FC<CustomSelectProps> = ({
     value,
     onChange,
@@ -146,34 +154,23 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             };
 
             if (isAndroid) {
-                // ANDROID: Prevenir scroll más agresivamente
+                // ANDROID: SOLUCIÓN SIMPLIFICADA - Solo prevenir overflow, NO usar position fixed
                 const originalOverflow = document.body.style.overflow;
-                const originalPosition = document.body.style.position;
-                const originalTop = document.body.style.top;
-                const scrollY = window.scrollY;
+                const originalTouchAction = document.body.style.touchAction;
 
                 document.body.style.overflow = 'hidden';
-                document.body.style.position = 'fixed';
-                document.body.style.top = `-${scrollY}px`;
-                document.body.style.width = '100%';
+                document.body.style.touchAction = 'none';
 
-                // Prevenir eventos de touch y wheel en toda la página
+                // Prevenir eventos solo fuera del dropdown
                 document.addEventListener('touchmove', preventTouchMove, { passive: false });
                 document.addEventListener('wheel', preventDefault, { passive: false });
-                document.addEventListener('scroll', preventDefault, { passive: false });
 
                 return () => {
                     document.body.style.overflow = originalOverflow;
-                    document.body.style.position = originalPosition;
-                    document.body.style.top = originalTop;
-                    document.body.style.width = '';
-
-                    // Restaurar posición de scroll
-                    window.scrollTo(0, scrollY);
+                    document.body.style.touchAction = originalTouchAction;
 
                     document.removeEventListener('touchmove', preventTouchMove);
                     document.removeEventListener('wheel', preventDefault);
-                    document.removeEventListener('scroll', preventDefault);
                 };
             } else if (isKeyboardOpen) {
                 // iOS/Desktop CON TECLADO
@@ -379,9 +376,19 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const handleSelect = (optionValue: string) => {
         if (!isScrolling) {
             onChange(optionValue);
-            setIsOpen(false);
-            setSearchTerm('');
-            setShouldFocusInput(false);
+
+            // Para Android: usar setTimeout para evitar el salto visual
+            if (isAndroid) {
+                setTimeout(() => {
+                    setIsOpen(false);
+                    setSearchTerm('');
+                    setShouldFocusInput(false);
+                }, 0);
+            } else {
+                setIsOpen(false);
+                setSearchTerm('');
+                setShouldFocusInput(false);
+            }
         }
     };
 
@@ -419,6 +426,13 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         if (!isScrolling && touchDuration < maxDuration) {
             e.preventDefault();
             e.stopPropagation();
+
+            // Para Android: prevenir cualquier comportamiento de rebote
+            if (isAndroid) {
+                e.nativeEvent.preventDefault();
+                e.nativeEvent.stopImmediatePropagation();
+            }
+
             handleSelect(optionValue);
         }
 
@@ -428,9 +442,19 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
     const handleToggle = () => {
         if (!disabled) {
-            setIsOpen(!isOpen);
-            setShouldFocusInput(false);
-            setInputFocused(false);
+            // Para Android: transición más suave
+            if (isAndroid && isOpen) {
+                // Al cerrar, hacerlo gradualmente
+                setTimeout(() => {
+                    setIsOpen(false);
+                    setShouldFocusInput(false);
+                    setInputFocused(false);
+                }, 0);
+            } else {
+                setIsOpen(!isOpen);
+                setShouldFocusInput(false);
+                setInputFocused(false);
+            }
         }
     };
 
@@ -462,17 +486,38 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                         className={`fixed inset-0 z-40 md:hidden ${isAndroid ? 'bg-black/25' : 'bg-black/20'
                             }`}
                         onClick={() => {
-                            setIsOpen(false);
-                            setShouldFocusInput(false);
+                            if (isAndroid) {
+                                setTimeout(() => {
+                                    setIsOpen(false);
+                                    setShouldFocusInput(false);
+                                }, 0);
+                            } else {
+                                setIsOpen(false);
+                                setShouldFocusInput(false);
+                            }
+                        }}
+                        onTouchStart={(e) => {
+                            if (isAndroid) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
                         }}
                         onTouchMove={(e) => {
                             // Prevenir completamente el touchmove en el overlay
                             e.preventDefault();
                             e.stopPropagation();
                         }}
+                        onTouchEnd={(e) => {
+                            if (isAndroid) {
+                                e.preventDefault();
+                                e.stopPropagation();
+                            }
+                        }}
                         style={{
                             touchAction: 'none',
-                            overscrollBehavior: 'none'
+                            overscrollBehavior: 'none',
+                            WebkitTouchCallout: 'none',
+                            WebkitUserSelect: 'none'
                         }}
                     />
 

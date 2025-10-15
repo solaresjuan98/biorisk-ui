@@ -126,6 +126,13 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
     const selectedOption = options.find(opt => opt.value === value);
 
+    // Función para cerrar el dropdown
+    const closeDropdown = () => {
+        setIsOpen(false);
+        setSearchTerm('');
+        setShouldFocusInput(false);
+    };
+
     // Prevenir scroll de la página cuando el dropdown está abierto - CORREGIDO PARA ANDROID
     useEffect(() => {
         if (isOpen) {
@@ -265,9 +272,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     useEffect(() => {
         const handleClickOutside = (event: MouseEvent | TouchEvent) => {
             if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-                setIsOpen(false);
-                setSearchTerm('');
-                setShouldFocusInput(false);
+                closeDropdown();
             }
         };
 
@@ -358,9 +363,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const handleSelect = (optionValue: string) => {
         if (!isScrolling) {
             onChange(optionValue);
-            setIsOpen(false);
-            setSearchTerm('');
-            setShouldFocusInput(false);
+            closeDropdown();
         }
     };
 
@@ -423,6 +426,14 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         }
     };
 
+    // NUEVO: Manejar clic en el overlay para cerrar el dropdown
+    const handleOverlayClick = (e: React.MouseEvent | React.TouchEvent) => {
+        // Verificar que el clic sea directamente en el overlay, no en sus hijos
+        if (e.target === e.currentTarget) {
+            closeDropdown();
+        }
+    };
+
     return (
         <div className="relative" ref={dropdownRef}>
             <div
@@ -445,14 +456,12 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
             {isOpen && !disabled && (
                 <>
-                    {/* Overlay */}
+                    {/* Overlay - MODIFICADO para cerrar al hacer clic */}
                     <div
                         className={`fixed inset-0 z-40 md:hidden ${isAndroid ? 'bg-black/15' : (isKeyboardOpen ? 'bg-black/10' : 'bg-black/20')
                             }`}
-                        onClick={() => {
-                            setIsOpen(false);
-                            setShouldFocusInput(false);
-                        }}
+                        onClick={handleOverlayClick}
+                        onTouchEnd={handleOverlayClick}
                         onTouchMove={(e) => {
                             if (!isKeyboardOpen && !isAndroid) {
                                 e.preventDefault();

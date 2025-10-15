@@ -81,7 +81,8 @@ const Prediction = () => {
         maxValidationAttempts,
         photoFrozen,
         resetValidation,
-        setEndpointUrl
+        setEndpointUrl,
+        isCameraLoading
     } = useCamera();
 
     const { processingSteps } = useAIProcessing();
@@ -628,6 +629,7 @@ const Prediction = () => {
                     photoFrozen={photoFrozen}
                     resetValidation={resetValidation}
                     setEndpointUrl={setEndpointUrl}
+                    isCameraLoading={isCameraLoading}
                 />
 
                 {/* SKELETON AQUÍ */}

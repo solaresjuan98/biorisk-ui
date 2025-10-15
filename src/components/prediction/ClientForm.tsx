@@ -80,6 +80,7 @@ interface ClientFormProps {
     photoFrozen?: boolean;
     resetValidation?: () => void;
     setEndpointUrl?: (url: string) => void;
+    isCameraLoading: boolean;
 }
 
 // Componente de Select Personalizado - CORREGIDO PARA ANDROID
@@ -140,11 +141,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 // ANDROID: Enfoque más suave - solo prevenir overflow sin position fixed
                 const originalOverflow = document.body.style.overflow;
                 const originalTouchAction = document.body.style.touchAction;
-                
+
                 // Solo prevenir scroll del body, mantener posición
                 document.body.style.overflow = 'hidden';
                 document.body.style.touchAction = 'none';
-                
+
                 // Prevenir eventos de scroll solo en el document, no en el dropdown
                 const preventScroll = (e: TouchEvent) => {
                     // Solo prevenir si el touch no es dentro del dropdown
@@ -471,10 +472,10 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
 
                     {/* Dropdown */}
                     <div className={`absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden ${(isKeyboardOpen && !isAndroid)
-                            ? 'fixed top-4 left-4 right-4 z-[9999] max-h-[40vh]'
-                            : 'max-h-60 sm:max-h-64'
+                        ? 'fixed top-4 left-4 right-4 z-[9999] max-h-[40vh]'
+                        : 'max-h-60 sm:max-h-64'
                         }`}>
-                        
+
                         {/* Campo de búsqueda */}
                         <div className="p-2 border-b border-gray-200 bg-white sticky top-0 z-10">
                             <input
@@ -620,7 +621,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({
     maxValidationAttempts = 10,
     photoFrozen = false,
     resetValidation,
-    setEndpointUrl
+    setEndpointUrl,
+    isCameraLoading
 }) => {
 
     const [cuiError, setCuiError] = useState('');
@@ -1051,7 +1053,375 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                             </button>
                         </div>
 
-                        
+                        {/* Contenido según el modo seleccionado */}
+                        {photoMode === 'camera' && (
+                            <div>
+                                {/* Botón para tomar foto */}
+                                {/* <div className="mb-3 sm:mb-4">
+                                    <button
+                                        type="button"
+                                        onClick={openCamera}
+                                        disabled={isCameraOpen}
+                                        className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 border rounded-lg sm:rounded-xl font-medium sm:font-semibold flex items-center justify-center gap-1.5 sm:gap-2 transition-all duration-300 shadow-sm text-sm sm:text-base ${isCameraOpen
+                                            ? 'bg-gray-100 border-gray-300 text-gray-500 cursor-not-allowed'
+                                            : 'bg-white border-gray-300 hover:border-purple-400 text-gray-900 cursor-pointer hover:shadow'
+                                            }`}
+                                    >
+                                        <Camera className="w-4 h-4 sm:w-5 sm:h-5" />
+                                        {isCameraOpen ? 'Cámara Activa' : 'Abrir Cámara para Selfie'}
+                                    </button>
+                                </div> */}
+                                {!isCameraOpen && isCameraLoading && (
+                                    <div className="p-6 sm:p-8 border rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-50 to-purple-50 border-blue-200">
+                                        <div className="flex flex-col items-center justify-center space-y-4">
+                                            <div className="relative">
+                                                <div className="w-12 h-12 sm:w-16 sm:h-16 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
+                                                <Camera className="absolute inset-0 m-auto w-5 h-5 sm:w-6 sm:h-6 text-blue-600 animate-pulse" />
+                                            </div>
+                                            <div className="text-center space-y-2">
+                                                <h4 className="text-base sm:text-lg font-semibold text-gray-900">
+                                                    Inicializando cámara...
+                                                </h4>
+                                                <p className="text-sm text-gray-600">
+                                                    Por favor, permite el acceso a la cámara cuando se solicite
+                                                </p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Panel de cámara con detección facial por endpoint */}
+                                {(isCameraOpen)&& (
+                                    <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl bg-black/90 text-white">
+                                        <div className="relative rounded-lg sm:rounded-xl overflow-hidden">
+                                            {/* Video de la cámara */}
+                                            <video
+                                                ref={videoRef}
+                                                className="w-full max-h-[50vh] sm:max-h-[60vh] rounded-lg sm:rounded-xl bg-black"
+                                                autoPlay
+                                                playsInline
+                                                muted
+                                                style={{
+                                                    width: '100%',
+                                                    height: '100%',
+                                                    objectFit: 'cover',
+                                                    transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+                                                    // transform: facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(-1)'
+                                                }}
+                                            // style={{ 
+                                            //     width: '100%', 
+                                            //     height: '100%', 
+                                            //     objectFit: 'cover',
+                                            //     transform: 'scaleX(1)' // Voltear horizontalmente para cámara frontal
+
+                                            // }}
+                                            />
+
+                                            {/* Overlay con círculo guía, óvalo facial y esquinas de marco */}
+                                            <div className="absolute inset-0 pointer-events-none">
+                                                <svg
+                                                    className="w-full h-full"
+                                                    viewBox="0 0 100 100"
+                                                    preserveAspectRatio="xMidYMid slice"
+                                                >
+                                                    <defs>
+                                                        {/* Máscara circular para móviles - Más grande */}
+                                                        <mask id="circle-mask-mobile">
+                                                            <rect width="100" height="100" fill="white" />
+                                                            <circle cx="50" cy="50" r="33" fill="black" />
+                                                        </mask>
+
+                                                        {/* Máscara circular para desktop - Tamaño original */}
+                                                        <mask id="circle-mask-desktop">
+                                                            <rect width="100" height="100" fill="white" />
+                                                            <circle cx="50" cy="50" r="24" fill="black" />
+                                                        </mask>
+                                                    </defs>
+
+                                                    {/* Fondo negro con máscara circular - Móvil */}
+                                                    <rect
+                                                        width="100"
+                                                        height="100"
+                                                        fill="black"
+                                                        fillOpacity="0.7"
+                                                        mask="url(#circle-mask-mobile)"
+                                                        className="sm:hidden"
+                                                    />
+
+                                                    {/* Fondo negro con máscara circular - Desktop */}
+                                                    <rect
+                                                        width="100"
+                                                        height="100"
+                                                        fill="black"
+                                                        fillOpacity="0.7"
+                                                        mask="url(#circle-mask-desktop)"
+                                                        className="hidden sm:block"
+                                                    />
+
+                                                    {/* Círculo guía principal - Más grande en móviles */}
+                                                    <circle
+                                                        cx="50"
+                                                        cy="50"
+                                                        r="35"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1.2"
+                                                        strokeDasharray={getGuideState().strokeDasharray}
+                                                        className={`${getGuideState().className} sm:hidden`}
+                                                    />
+
+                                                    {/* Círculo guía para tablet y desktop */}
+                                                    <circle
+                                                        cx="50"
+                                                        cy="50"
+                                                        r="26"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="0.8"
+                                                        strokeDasharray={getGuideState().strokeDasharray}
+                                                        className={`${getGuideState().className} hidden sm:block`}
+                                                    />
+
+                                                    {/* Óvalo simulando rostro humano - Móvil */}
+                                                    <ellipse
+                                                        cx="50"
+                                                        cy="50"
+                                                        rx="12"
+                                                        ry="16"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="0.7"
+                                                        strokeDasharray="2 2"
+                                                        opacity="0.6"
+                                                        className="sm:hidden"
+                                                    />
+
+                                                    {/* Óvalo simulando rostro humano - Desktop */}
+                                                    <ellipse
+                                                        cx="50"
+                                                        cy="52"
+                                                        rx="10"
+                                                        ry="14"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="0.5"
+                                                        strokeDasharray="2 2"
+                                                        opacity="0.6"
+                                                        className="hidden sm:block"
+                                                    />
+
+                                                    {/* Esquinas del marco móvil - Ajustadas para mejor posición */}
+                                                    {/* Superior Izquierda - Móvil */}
+                                                    <path
+                                                        d="M 30 35 L 30 28 L 37 28"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1.5"
+                                                        strokeLinecap="round"
+                                                        className="sm:hidden"
+                                                    />
+
+                                                    {/* Superior Derecha - Móvil */}
+                                                    <path
+                                                        d="M 63 28 L 70 28 L 70 35"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1.5"
+                                                        strokeLinecap="round"
+                                                        className="sm:hidden"
+                                                    />
+
+                                                    {/* Inferior Izquierda - Móvil */}
+                                                    <path
+                                                        d="M 30 65 L 30 72 L 37 72"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1.5"
+                                                        strokeLinecap="round"
+                                                        className="sm:hidden"
+                                                    />
+
+                                                    {/* Inferior Derecha - Móvil */}
+                                                    <path
+                                                        d="M 63 72 L 70 72 L 70 65"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1.5"
+                                                        strokeLinecap="round"
+                                                        className="sm:hidden"
+                                                    />
+
+                                                    {/* Esquinas del marco desktop - Tamaño original */}
+                                                    {/* Superior Izquierda - Desktop */}
+                                                    <path
+                                                        d="M 34 38 L 34 32 L 40 32"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1"
+                                                        strokeLinecap="round"
+                                                        className="hidden sm:block"
+                                                    />
+
+                                                    {/* Superior Derecha - Desktop */}
+                                                    <path
+                                                        d="M 60 32 L 66 32 L 66 38"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1"
+                                                        strokeLinecap="round"
+                                                        className="hidden sm:block"
+                                                    />
+
+                                                    {/* Inferior Izquierda - Desktop */}
+                                                    <path
+                                                        d="M 34 62 L 34 68 L 40 68"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1"
+                                                        strokeLinecap="round"
+                                                        className="hidden sm:block"
+                                                    />
+
+                                                    {/* Inferior Derecha - Desktop */}
+                                                    <path
+                                                        d="M 60 68 L 66 68 L 66 62"
+                                                        fill="none"
+                                                        stroke={getGuideState().color}
+                                                        strokeWidth="1"
+                                                        strokeLinecap="round"
+                                                        className="hidden sm:block"
+                                                    />
+                                                </svg>
+                                            </div>
+
+                                            {/* Instrucciones en pantalla */}
+                                            <div className="absolute top-2 sm:top-4 left-1/2 transform -translate-x-1/2 z-10">
+                                                <div className={`inline-flex items-center gap-1 sm:gap-1.5 md:gap-2 px-2 sm:px-3 md:px-4 py-1.5 sm:py-2 md:py-2.5 rounded-full backdrop-blur-md shadow-lg text-xs sm:text-sm font-medium transition-all duration-300 ${photoFrozen && faceDetected
+                                                    ? 'bg-green-500/90 text-white border border-green-400/50 shadow-green-500/20'
+                                                    : isValidatingWithEndpoint
+                                                        ? 'bg-blue-500/90 text-white border border-blue-400/50 shadow-blue-500/20'
+                                                        : 'bg-orange-500/90 text-white border border-orange-400/50 shadow-orange-500/20'
+                                                    }`}>
+                                                    {photoFrozen && faceDetected ? (
+                                                        <>
+                                                            <CheckCircle className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                                                            <span className="leading-tight whitespace-nowrap">
+                                                                <span className="hidden xs:inline">Rostro válido</span>
+                                                                <span className="xs:hidden">Válido</span>
+                                                                <span className="hidden sm:inline"> - Listo</span>
+                                                            </span>
+                                                        </>
+                                                    ) : isValidatingWithEndpoint ? (
+                                                        <>
+                                                            <Loader2 className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 animate-spin flex-shrink-0" />
+                                                            <span className="leading-tight whitespace-nowrap">
+                                                                <span className="hidden xs:inline">Validando</span>
+                                                                <span className="xs:hidden">...</span>
+                                                                {/* <span className="hidden sm:inline"> ({validationAttempts}/{maxValidationAttempts})</span> */}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <Clock className="w-3 h-3 sm:w-3.5 sm:h-3.5 md:w-4 md:h-4 flex-shrink-0" />
+                                                            <span className="leading-tight whitespace-nowrap">
+                                                                <span className="hidden sm:inline">Centra tu rostro</span>
+                                                                <span className="sm:hidden">Centra rostro</span>
+                                                            </span>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {hasMultipleCameras && APP_ENVIRONMENT === 'development' ? 'hay más camaras detectada' : 'solo hay una camara detectada'}
+                                            {/* Botón para cambiar cámara */}
+                                            {isCameraOpen && (
+                                                <button
+                                                    type="button"
+                                                    onClick={toggleCamera}
+                                                    disabled={isValidatingWithEndpoint || !hasMultipleCameras}
+                                                    className={`absolute top-2 sm:top-4 right-2 sm:right-4 p-2 sm:p-2.5 md:p-3 backdrop-blur-md rounded-full transition-all duration-200 shadow-lg ${isValidatingWithEndpoint || !hasMultipleCameras
+                                                        ? 'bg-gray-500/20 cursor-not-allowed opacity-50'
+                                                        : 'bg-white/30 hover:bg-white/40 cursor-pointer hover:scale-105'
+                                                        }`}
+                                                    title={
+                                                        !hasMultipleCameras
+                                                            ? 'Solo hay una cámara disponible'
+                                                            : facingMode === 'user'
+                                                                ? 'Cambiar a cámara trasera'
+                                                                : 'Cambiar a cámara frontal'
+                                                    }
+                                                >
+                                                    <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white ${isValidatingWithEndpoint || !hasMultipleCameras ? 'opacity-50' : ''
+                                                        }`} />
+                                                </button>
+                                            )}
+                                            {/* {hasMultipleCameras && (
+                                                <button
+                                                    type="button"
+                                                    onClick={toggleCamera}
+                                                    disabled={isValidatingWithEndpoint}
+                                                    className={`absolute top-2 sm:top-4 right-2 sm:right-4 p-2 sm:p-2.5 md:p-3 backdrop-blur-md rounded-full transition-all duration-200 shadow-lg ${isValidatingWithEndpoint
+                                                        ? 'bg-gray-500/20 cursor-not-allowed'
+                                                        : 'bg-white/30 hover:bg-white/40 cursor-pointer hover:scale-105'
+                                                        }`}
+                                                    title={facingMode === 'user' ? 'Cambiar a cámara trasera' : 'Cambiar a cámara frontal'}
+                                                >
+                                                    <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white ${isValidatingWithEndpoint ? 'opacity-50' : ''}`} />
+                                                </button>
+                                            )} */}
+
+                                            {/* Indicador de cámara activa */}
+                                            <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 px-2 sm:px-3 py-1 bg-blue-600/80 backdrop-blur-md rounded-full">
+                                                <div className="flex items-center gap-1.5 sm:gap-2">
+                                                    <div className="w-1.5 h-1.5 sm:w-2 sm:h-2 bg-blue-300 rounded-full animate-pulse"></div>
+                                                    <span className="text-xs font-medium">
+                                                        {facingMode === 'user' ? 'Cámara frontal' : 'Cámara trasera'}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {/* Controles de la cámara */}
+                                        <div className="flex items-center justify-center gap-2 sm:gap-3 mt-3 sm:mt-4">
+                                            <button
+                                                type="button"
+                                                onClick={capturePhoto}
+                                                disabled={!faceDetected || !photoFrozen || isValidatingWithEndpoint}
+                                                className={`px-4 sm:px-6 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-medium sm:font-semibold transition-all duration-200 flex items-center gap-1.5 sm:gap-2 text-sm sm:text-base ${faceDetected && photoFrozen && !isValidatingWithEndpoint
+                                                    ? 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                                                    : 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                                                    }`}
+                                            >
+                                                <Camera className="w-3 h-3 sm:w-4 sm:h-4" />
+                                                {getCaptureButtonText()}
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={closeCamera}
+                                                className="px-3 sm:px-5 py-2.5 sm:py-3 bg-gray-700 hover:bg-gray-600 rounded-lg sm:rounded-xl font-medium sm:font-semibold transition-colors text-sm sm:text-base"
+                                            >
+                                                Cancelar
+                                            </button>
+                                        </div>
+
+                                        {/* Instrucciones adicionales y estadísticas */}
+                                        <div className="mt-2 sm:mt-3 text-center space-y-1 sm:space-y-2">
+                                            <div className="text-xs sm:text-sm text-gray-300">
+                                                <p>• Mantén tu rostro centrado en el círculo</p>
+                                                {/* <p>• El sistema validará automáticamente cada 3 segundos</p> */}
+                                                <p>• Asegúrate de tener buena iluminación</p>
+                                            </div>
+                                            {/* {validationAttempts > 0 && (
+                                                <div className="text-xs text-blue-300">
+                                                    Intentos de validación: {validationAttempts}/{maxValidationAttempts}
+                                                </div>
+                                            )} */}
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {photoMode === 'upload' && (
                             <div>

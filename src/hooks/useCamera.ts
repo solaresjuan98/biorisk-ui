@@ -2,6 +2,7 @@ import { getFaceValidation } from '@/utils/getFaceValidation';
 import { useEffect, useRef, useState } from 'react'
 
 export const useCamera = () => {
+    const [isCameraLoading, setIsCameraLoading] = useState(false);
     const [isCameraOpen, setIsCameraOpen] = useState(false);
     const [photoDataUrl, setPhotoDataUrl] = useState<string | null>(null);
     const [facingMode, setFacingMode] = useState<'user' | 'environment'>('user');
@@ -354,6 +355,7 @@ export const useCamera = () => {
 
     const openCamera = async () => {
         try {
+            setIsCameraLoading(true);
             if (!navigator.mediaDevices?.getUserMedia) {
                 fileInputRef.current?.click();
                 return;
@@ -401,7 +403,7 @@ export const useCamera = () => {
 
             // Esperar antes de iniciar captura automática
             setTimeout(startAutomaticCapture, 1000);
-
+            setIsCameraLoading(false);
         } catch (error) {
             console.error('Error al abrir cámara:', error);
             setIsCameraOpen(false);
@@ -411,6 +413,8 @@ export const useCamera = () => {
             setTimeout(() => {
                 fileInputRef.current?.click();
             }, 100);
+        } finally {
+            setIsCameraLoading(false);
         }
     };
 
@@ -587,6 +591,7 @@ export const useCamera = () => {
         onFileCapture,
         toggleCamera,
         resetValidation,
-        setEndpointUrl
+        setEndpointUrl,
+        isCameraLoading,
     }
 }

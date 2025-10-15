@@ -43,17 +43,23 @@ export const useCamera = () => {
         const canvas = canvasRef.current;
 
         try {
-            const w = video.videoWidth || 640;
-            const h = video.videoHeight || 480;
+            // 🔥 MEJORADO: Usar dimensiones reales del video para máxima calidad
+            const w = video.videoWidth || 1920;
+            const h = video.videoHeight || 1080;
+            
             canvas.width = w;
             canvas.height = h;
 
             const ctx = canvas.getContext("2d");
             if (!ctx) return;
 
+            // 🔥 MEJORADO: Configurar contexto para máxima calidad
+            ctx.imageSmoothingEnabled = true;
+            ctx.imageSmoothingQuality = 'high';
+            
             ctx.drawImage(video, 0, 0, w, h);
             
-            // ✅ MEJORA: Usar calidad máxima para validación
+            // 🔥 MEJORADO: Calidad JPEG al 95% (mejor que 80%)
             const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
 
             await validateFaceWithEndpoint(dataUrl);
@@ -76,6 +82,7 @@ export const useCamera = () => {
                 setPhotoDataUrl(imageDataUrl);
                 setPhotoFrozen(true);
 
+                // Detener captura automática
                 if (captureIntervalRef.current) {
                     clearInterval(captureIntervalRef.current);
                     captureIntervalRef.current = null;
@@ -91,7 +98,14 @@ export const useCamera = () => {
                     });
                 }
 
-                console.log('✅ Rostro válido detectado y guardado');
+                console.log('✅ Rostro válido detectado');
+                
+                // 🔥 NUEVO: Cerrar cámara automáticamente después de 1.5 segundos
+                setTimeout(async () => {
+                    console.log('🔒 Cerrando cámara automáticamente...');
+                    await closeCamera();
+                }, 1500);
+                
             } else {
                 setFaceDetected(false);
                 setFacePosition(null);
@@ -141,44 +155,45 @@ export const useCamera = () => {
         stopAutomaticCapture();
     };
 
-    // ✅ CRÍTICO: Función mejorada para detener el stream
+    // 🔥 MEJORADO: Detener stream de forma segura y completa
     const stopStreamSafely = async () => {
         console.log('🛑 Deteniendo stream de forma segura...');
 
+        // Detener captura automática primero
         stopAutomaticCapture();
 
-        // Pausar el video
+        // Pausar y limpiar el video
         if (videoRef.current) {
             try {
                 videoRef.current.pause();
-                // ✅ NUEVO: Limpiar srcObject inmediatamente
                 videoRef.current.srcObject = null;
+                // Forzar recarga del elemento
+                videoRef.current.load();
             } catch (error) {
                 console.warn('Error al pausar video:', error);
             }
         }
 
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Esperar a que el video se detenga completamente
+        await new Promise(resolve => setTimeout(resolve, 150));
 
-        // ✅ CRÍTICO: Detener TODOS los tracks del stream
+        // Detener TODOS los tracks del stream
         if (streamRef.current) {
             try {
                 const tracks = streamRef.current.getTracks();
-                console.log(`📹 Deteniendo ${tracks.length} tracks...`);
-                
                 tracks.forEach((track) => {
                     track.stop();
-                    console.log(`✅ Track detenido: ${track.kind} - Estado: ${track.readyState}`);
+                    console.log('✅ Track detenido:', track.kind, track.label);
                 });
                 
-                // ✅ NUEVO: Limpiar el stream ref inmediatamente
+                // Limpiar referencia
                 streamRef.current = null;
             } catch (error) {
-                console.error('❌ Error al detener tracks:', error);
+                console.warn('Error al detener tracks:', error);
             }
         }
 
-        // ✅ NUEVO: Esperar más para liberar recursos en dispositivos lentos
+        // Esperar para asegurar liberación completa de recursos
         await new Promise(resolve => setTimeout(resolve, 300));
         
         console.log('✅ Stream completamente detenido');
@@ -297,30 +312,36 @@ export const useCamera = () => {
                 return;
             }
     
+            // Limpiar estado previo completamente
             await stopStreamSafely();
             resetValidation();
     
+            // Verificar cámaras ANTES de abrir
             await checkMultipleCameras();
     
+            // Esperar tiempo suficiente
             await new Promise(resolve => setTimeout(resolve, 200));
     
+            // Abrir la cámara (actualiza el DOM)
             setIsCameraOpen(true);
     
+            // Esperar a que el DOM se actualice
             await new Promise(resolve => setTimeout(resolve, 300));
     
+            // Verificar que videoRef está montado
             if (!videoRef.current) {
                 console.error('❌ videoRef no disponible después de abrir cámara');
                 throw new Error('Video element no montado');
             }
     
-            // ✅ MEJORA: Constraints optimizados para mejor calidad
+            // ⚡ MEJORADO: Constraints de alta calidad (similar a cámara nativa)
             const constraints = {
                 video: {
                     facingMode: { ideal: facingMode },
-                    width: { ideal: 1920, max: 3840 },  // Aumentado
-                    height: { ideal: 1080, max: 2160 }, // Aumentado
+                    width: { ideal: 1920, max: 4096 },    // Resolución máxima
+                    height: { ideal: 1080, max: 2160 },   // Hasta 4K
                     aspectRatio: { ideal: 16 / 9 },
-                    frameRate: { ideal: 30, max: 60 }   // Añadido
+                    frameRate: { ideal: 30, max: 60 },    // Frame rate óptimo
                 },
                 audio: false,
             };
@@ -331,6 +352,7 @@ export const useCamera = () => {
                 throw new Error('No se pudo obtener el stream');
             }
     
+            // Esperar antes de iniciar captura automática
             setTimeout(startAutomaticCapture, 1000);
     
         } catch (error) {
@@ -338,28 +360,18 @@ export const useCamera = () => {
             setIsCameraOpen(false);
             await stopStreamSafely();
     
+            // Fallback a selección de archivo
             setTimeout(() => {
                 fileInputRef.current?.click();
             }, 100);
         }
     };
 
-    // ✅ CRÍTICO: closeCamera mejorado
     const closeCamera = async () => {
-        console.log('🚪 Cerrando cámara...');
-        
-        // Primero detenemos todo el procesamiento
-        stopAutomaticCapture();
-        
-        // Luego detenemos el stream
         await stopStreamSafely();
-        
-        // Finalmente actualizamos el estado
         setIsCameraOpen(false);
         resetValidation();
         isTogglingRef.current = false;
-        
-        console.log('✅ Cámara cerrada completamente');
     };
 
     const toggleCamera = async () => {
@@ -375,26 +387,24 @@ export const useCamera = () => {
             console.log(`🔄 Cambiando de ${facingMode} a ${newMode}`);
 
             await stopStreamSafely();
-
             await new Promise(resolve => setTimeout(resolve, 800));
 
-            // ✅ MEJORA: Constraints mejorados para toggle
             const constraintStrategies = [
                 {
                     video: {
                         facingMode: { exact: newMode },
-                        width: { ideal: 1920, max: 3840 },
+                        width: { ideal: 1920, max: 4096 },
                         height: { ideal: 1080, max: 2160 },
                         aspectRatio: { ideal: 16 / 9 },
-                        frameRate: { ideal: 30 }
+                        frameRate: { ideal: 30, max: 60 },
                     },
                     audio: false,
                 },
                 {
                     video: {
                         facingMode: { ideal: newMode },
-                        width: { ideal: 1280, max: 1920 },
-                        height: { ideal: 720, max: 1080 }
+                        width: { ideal: 1920, max: 4096 },
+                        height: { ideal: 1080, max: 2160 }
                     },
                     audio: false,
                 },
@@ -434,17 +444,30 @@ export const useCamera = () => {
 
         } catch (error) {
             console.error('❌ Error al cambiar cámara:', error);
-            await stopStreamSafely();
-            setFacingMode(facingMode === 'user' ? 'environment' : 'user');
-            
+
             try {
                 const fallbackConstraints = {
-                    video: { facingMode: facingMode },
-                    audio: false
+                    video: {
+                        facingMode: { ideal: facingMode },
+                        width: { ideal: 1920, max: 4096 },
+                        height: { ideal: 1080, max: 2160 },
+                    },
+                    audio: false,
                 };
-                await startStreamSafely(fallbackConstraints);
+
+                await stopStreamSafely();
+                await new Promise(resolve => setTimeout(resolve, 500));
+
+                const fallbackStream = await startStreamSafely(fallbackConstraints);
+                if (fallbackStream) {
+                    resetValidation();
+                    setTimeout(startAutomaticCapture, 1000);
+                    console.log('✅ Fallback a cámara original exitoso');
+                } else {
+                    throw new Error('Fallback falló');
+                }
             } catch (fallbackError) {
-                console.error('❌ Error en fallback:', fallbackError);
+                console.error('❌ Fallback falló:', fallbackError);
                 await closeCamera();
             }
         } finally {
@@ -452,7 +475,7 @@ export const useCamera = () => {
         }
     };
 
-    // ✅ CRÍTICO: capturePhoto mejorado - CIERRA LA CÁMARA
+    // 🔥 MEJORADO: Capturar foto cierra la cámara automáticamente
     const capturePhoto = async () => {
         if (!faceDetected || !photoDataUrl) {
             console.log('No hay rostro válido detectado para guardar');
@@ -461,27 +484,11 @@ export const useCamera = () => {
 
         console.log('📸 Guardando foto y cerrando cámara...');
         
-        // ✅ CRÍTICO: Capturar foto de alta calidad antes de cerrar
-        if (videoRef.current && canvasRef.current) {
-            const video = videoRef.current;
-            const canvas = canvasRef.current;
-            
-            const w = video.videoWidth || 1920;
-            const h = video.videoHeight || 1080;
-            canvas.width = w;
-            canvas.height = h;
-
-            const ctx = canvas.getContext("2d");
-            if (ctx) {
-                ctx.drawImage(video, 0, 0, w, h);
-                // ✅ MEJORA: Calidad máxima 0.98
-                const highQualityPhoto = canvas.toDataURL("image/jpeg", 0.98);
-                setPhotoDataUrl(highQualityPhoto);
-                console.log('✅ Foto de alta calidad capturada');
-            }
-        }
+        // Detener captura automática inmediatamente
+        stopAutomaticCapture();
         
-        // ✅ CRÍTICO: Cerrar la cámara completamente
+        // La foto ya está guardada en photoDataUrl (capturada por validateFaceWithEndpoint)
+        // Solo necesitamos cerrar la cámara
         await closeCamera();
         
         console.log('✅ Foto guardada y cámara cerrada');
@@ -499,24 +506,14 @@ export const useCamera = () => {
         endpointUrl.current = url;
     };
 
-    // ✅ CRÍTICO: Cleanup al desmontar componente
     useEffect(() => {
         checkMultipleCameras();
 
         return () => {
-            console.log('🧹 Limpiando recursos al desmontar...');
+            // Cleanup al desmontar
             stopAutomaticCapture();
-            
             if (streamRef.current) {
-                streamRef.current.getTracks().forEach((track) => {
-                    track.stop();
-                    console.log('✅ Track detenido en cleanup:', track.kind);
-                });
-                streamRef.current = null;
-            }
-            
-            if (videoRef.current) {
-                videoRef.current.srcObject = null;
+                streamRef.current.getTracks().forEach((t) => t.stop());
             }
         };
     }, []);

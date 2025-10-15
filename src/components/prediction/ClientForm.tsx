@@ -820,6 +820,38 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         };
     };
 
+    // Agregar este useEffect después de tus otros useEffects
+    useEffect(() => {
+        // Hacer scroll automático cuando la cámara se abra completamente
+        if (isCameraOpen && !isCameraLoading) {
+            // Pequeño delay para asegurar que el DOM se haya renderizado
+            const timer = setTimeout(() => {
+                // Buscar el contenedor de la cámara
+                const cameraContainer = document.querySelector('[data-camera-container]');
+                if (cameraContainer) {
+                    cameraContainer.scrollIntoView({
+                        behavior: 'smooth',
+                        block: 'center', // Centra el elemento en la pantalla
+                        inline: 'nearest'
+                    });
+                } else {
+                    // Fallback: scroll hacia el video element
+                    const videoElement = videoRef.current;
+                    if (videoElement) {
+                        videoElement.scrollIntoView({
+                            behavior: 'smooth',
+                            block: 'center',
+                            inline: 'nearest'
+                        });
+                    }
+                }
+            }, 100); // Pequeño delay de 100ms
+
+            return () => clearTimeout(timer);
+        }
+    }, [isCameraOpen, isCameraLoading]);
+
+
     return (
         <div className="bg-white/95 backdrop-blur-lg rounded-xl sm:rounded-2xl shadow-xl sm:shadow-2xl border border-white/30 p-4 sm:p-6 lg:p-8">
             {!loading && (
@@ -1091,8 +1123,12 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                 )}
 
                                 {/* Panel de cámara con detección facial por endpoint */}
-                                {(isCameraOpen)&& (
-                                    <div className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl bg-black/90 text-white">
+                                {/* Panel de cámara con detección facial por endpoint */}
+                                {(isCameraOpen) && (
+                                    <div
+                                        data-camera-container
+                                        className="p-3 sm:p-4 border rounded-xl sm:rounded-2xl bg-black/90 text-white"
+                                    >
                                         <div className="relative rounded-lg sm:rounded-xl overflow-hidden">
                                             {/* Video de la cámara */}
                                             <video
@@ -1106,17 +1142,10 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                     height: '100%',
                                                     objectFit: 'cover',
                                                     transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
-                                                    // transform: facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(-1)'
                                                 }}
-                                            // style={{ 
-                                            //     width: '100%', 
-                                            //     height: '100%', 
-                                            //     objectFit: 'cover',
-                                            //     transform: 'scaleX(1)' // Voltear horizontalmente para cámara frontal
-
-                                            // }}
                                             />
 
+                                            {/* Resto del código sigue igual... */}
                                             {/* Overlay con círculo guía, óvalo facial y esquinas de marco */}
                                             <div className="absolute inset-0 pointer-events-none">
                                                 <svg
@@ -1317,7 +1346,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                             <span className="leading-tight whitespace-nowrap">
                                                                 <span className="hidden xs:inline">Validando</span>
                                                                 <span className="xs:hidden">...</span>
-                                                                {/* <span className="hidden sm:inline"> ({validationAttempts}/{maxValidationAttempts})</span> */}
                                                             </span>
                                                         </>
                                                     ) : (
@@ -1355,20 +1383,6 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                         }`} />
                                                 </button>
                                             )}
-                                            {/* {hasMultipleCameras && (
-                                                <button
-                                                    type="button"
-                                                    onClick={toggleCamera}
-                                                    disabled={isValidatingWithEndpoint}
-                                                    className={`absolute top-2 sm:top-4 right-2 sm:right-4 p-2 sm:p-2.5 md:p-3 backdrop-blur-md rounded-full transition-all duration-200 shadow-lg ${isValidatingWithEndpoint
-                                                        ? 'bg-gray-500/20 cursor-not-allowed'
-                                                        : 'bg-white/30 hover:bg-white/40 cursor-pointer hover:scale-105'
-                                                        }`}
-                                                    title={facingMode === 'user' ? 'Cambiar a cámara trasera' : 'Cambiar a cámara frontal'}
-                                                >
-                                                    <RefreshCw className={`w-3 h-3 sm:w-4 sm:h-4 md:w-5 md:h-5 text-white ${isValidatingWithEndpoint ? 'opacity-50' : ''}`} />
-                                                </button>
-                                            )} */}
 
                                             {/* Indicador de cámara activa */}
                                             <div className="absolute bottom-2 sm:bottom-4 left-2 sm:left-4 px-2 sm:px-3 py-1 bg-blue-600/80 backdrop-blur-md rounded-full">
@@ -1409,14 +1423,8 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                         <div className="mt-2 sm:mt-3 text-center space-y-1 sm:space-y-2">
                                             <div className="text-xs sm:text-sm text-gray-300">
                                                 <p>• Mantén tu rostro centrado en el círculo</p>
-                                                {/* <p>• El sistema validará automáticamente cada 3 segundos</p> */}
                                                 <p>• Asegúrate de tener buena iluminación</p>
                                             </div>
-                                            {/* {validationAttempts > 0 && (
-                                                <div className="text-xs text-blue-300">
-                                                    Intentos de validación: {validationAttempts}/{maxValidationAttempts}
-                                                </div>
-                                            )} */}
                                         </div>
                                     </div>
                                 )}

@@ -1080,7 +1080,7 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                     width: '100%', 
                                                     height: '100%', 
                                                     objectFit: 'cover',
-                                                    transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+                                                    transform: facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(-1)'
                                                 }}      
                                                 // style={{ 
                                                 //     width: '100%', 

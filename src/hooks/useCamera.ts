@@ -46,7 +46,7 @@ export const useCamera = () => {
     //         // 🔥 MEJORADO: Usar dimensiones reales del video para máxima calidad
     //         const w = video.videoWidth || 1920;
     //         const h = video.videoHeight || 1080;
-            
+
     //         canvas.width = w;
     //         canvas.height = h;
 
@@ -56,9 +56,9 @@ export const useCamera = () => {
     //         // 🔥 MEJORADO: Configurar contexto para máxima calidad
     //         ctx.imageSmoothingEnabled = true;
     //         ctx.imageSmoothingQuality = 'high';
-            
+
     //         ctx.drawImage(video, 0, 0, w, h);
-            
+
     //         // 🔥 MEJORADO: Calidad JPEG al 95% (mejor que 80%)
     //         const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
 
@@ -74,31 +74,25 @@ export const useCamera = () => {
         const canvas = canvasRef.current;
 
         try {
-            // 🔥 MEJORADO: Usar dimensiones reales del video para máxima calidad
+            // Usar dimensiones reales del video para máxima calidad
             const w = video.videoWidth || 1920;
             const h = video.videoHeight || 1080;
-            
+
             canvas.width = w;
             canvas.height = h;
 
             const ctx = canvas.getContext("2d");
             if (!ctx) return;
 
-            // MEJORADO: Configurar contexto para máxima calidad
+            // Configurar contexto para máxima calidad
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
 
-            // NUEVO: Voltear horizontalmente si es cámara frontal (corregir efecto espejo)
-            if (facingMode === 'user') {
-                ctx.save();
-                ctx.scale(-1, 1);
-                ctx.drawImage(video, -w, 0, w, h);
-                ctx.restore();
-            } else {
-                ctx.drawImage(video, 0, 0, w, h);
-            }
-            
-            // 🔥 MEJORADO: Calidad JPEG al 95% (mejor que 80%)
+            // CORREGIDO: Siempre capturar en orientación natural
+            // El video puede verse como espejo, pero la foto debe ser normal
+            ctx.drawImage(video, 0, 0, w, h);
+
+            // Calidad JPEG al 95%
             const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
 
             await validateFaceWithEndpoint(dataUrl);
@@ -138,13 +132,13 @@ export const useCamera = () => {
                 }
 
                 console.log('✅ Rostro válido detectado');
-                
+
                 // 🔥 NUEVO: Cerrar cámara automáticamente después de 1.5 segundos
                 setTimeout(async () => {
                     console.log('🔒 Cerrando cámara automáticamente...');
                     await closeCamera();
                 }, 1500);
-                
+
             } else {
                 setFaceDetected(false);
                 setFacePosition(null);
@@ -224,7 +218,7 @@ export const useCamera = () => {
                     track.stop();
                     console.log('✅ Track detenido:', track.kind, track.label);
                 });
-                
+
                 // Limpiar referencia
                 streamRef.current = null;
             } catch (error) {
@@ -234,7 +228,7 @@ export const useCamera = () => {
 
         // Esperar para asegurar liberación completa de recursos
         await new Promise(resolve => setTimeout(resolve, 300));
-        
+
         console.log('✅ Stream completamente detenido');
     };
 
@@ -350,29 +344,29 @@ export const useCamera = () => {
                 fileInputRef.current?.click();
                 return;
             }
-    
+
             // Limpiar estado previo completamente
             await stopStreamSafely();
             resetValidation();
-    
+
             // Verificar cámaras ANTES de abrir
             await checkMultipleCameras();
-    
+
             // Esperar tiempo suficiente
             await new Promise(resolve => setTimeout(resolve, 200));
-    
+
             // Abrir la cámara (actualiza el DOM)
             setIsCameraOpen(true);
-    
+
             // Esperar a que el DOM se actualice
             await new Promise(resolve => setTimeout(resolve, 300));
-    
+
             // Verificar que videoRef está montado
             if (!videoRef.current) {
                 console.error('❌ videoRef no disponible después de abrir cámara');
                 throw new Error('Video element no montado');
             }
-    
+
             // ⚡ MEJORADO: Constraints de alta calidad (similar a cámara nativa)
             const constraints = {
                 video: {
@@ -384,21 +378,21 @@ export const useCamera = () => {
                 },
                 audio: false,
             };
-    
+
             const stream = await startStreamSafely(constraints);
-    
+
             if (!stream) {
                 throw new Error('No se pudo obtener el stream');
             }
-    
+
             // Esperar antes de iniciar captura automática
             setTimeout(startAutomaticCapture, 1000);
-    
+
         } catch (error) {
             console.error('Error al abrir cámara:', error);
             setIsCameraOpen(false);
             await stopStreamSafely();
-    
+
             // Fallback a selección de archivo
             setTimeout(() => {
                 fileInputRef.current?.click();
@@ -522,14 +516,14 @@ export const useCamera = () => {
         }
 
         console.log('📸 Guardando foto y cerrando cámara...');
-        
+
         // Detener captura automática inmediatamente
         stopAutomaticCapture();
-        
+
         // La foto ya está guardada en photoDataUrl (capturada por validateFaceWithEndpoint)
         // Solo necesitamos cerrar la cámara
         await closeCamera();
-        
+
         console.log('✅ Foto guardada y cámara cerrada');
     };
 

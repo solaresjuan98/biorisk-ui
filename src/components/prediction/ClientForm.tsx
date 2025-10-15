@@ -1076,7 +1076,19 @@ export const ClientForm: React.FC<ClientFormProps> = ({
                                                 autoPlay
                                                 playsInline
                                                 muted
-                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                style={{
+                                                    width: '100%', 
+                                                    height: '100%', 
+                                                    objectFit: 'cover',
+                                                    transform: facingMode === 'user' ? 'scaleX(-1)' : 'none'
+                                                }}      
+                                                // style={{ 
+                                                //     width: '100%', 
+                                                //     height: '100%', 
+                                                //     objectFit: 'cover',
+                                                //     transform: 'scaleX(1)' // Voltear horizontalmente para cámara frontal
+                                                
+                                                // }}
                                             />
 
                                             {/* Overlay con círculo guía, óvalo facial y esquinas de marco */}

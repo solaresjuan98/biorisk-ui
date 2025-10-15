@@ -135,7 +135,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 // Verificar si el evento viene del dropdown
                 const target = e.target as Element;
                 const isFromDropdown = dropdownRef.current?.contains(target);
-
+                
                 // Si NO viene del dropdown, prevenir el evento
                 if (!isFromDropdown) {
                     e.preventDefault();
@@ -146,7 +146,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             const preventTouchMove = (e: TouchEvent) => {
                 const target = e.target as Element;
                 const isFromDropdown = dropdownRef.current?.contains(target);
-
+                
                 if (!isFromDropdown) {
                     e.preventDefault();
                     e.stopPropagation();
@@ -168,7 +168,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 return () => {
                     document.body.style.overflow = originalOverflow;
                     document.body.style.touchAction = originalTouchAction;
-
+                    
                     document.removeEventListener('touchmove', preventTouchMove);
                     document.removeEventListener('wheel', preventDefault);
                 };
@@ -196,9 +196,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     document.body.style.height = originalHeight;
                     document.body.style.width = originalWidth;
                     document.body.style.top = originalTop;
-
+                    
                     window.scrollTo(0, scrollY);
-
+                    
                     document.removeEventListener('touchmove', preventTouchMove);
                     document.removeEventListener('wheel', preventDefault);
                 };
@@ -226,28 +226,28 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
             const handleResize = () => {
                 const currentHeight = window.innerHeight;
                 const currentVisualHeight = window.visualViewport?.height || currentHeight;
-
+                
                 // Considerar que el teclado está abierto si el viewport se reduce significativamente
                 const heightDifference = window.screen.height - currentVisualHeight;
                 const keyboardOpen = heightDifference > 200; // Umbral más bajo para Android
-
+                
                 setIsKeyboardOpen(keyboardOpen);
             };
 
             handleResize(); // Ejecutar inmediatamente
-
+            
             window.addEventListener('resize', handleResize);
-
+            
             if ('visualViewport' in window) {
                 const visualViewport = window.visualViewport!;
                 visualViewport.addEventListener('resize', handleResize);
-
+                
                 return () => {
                     window.removeEventListener('resize', handleResize);
                     visualViewport.removeEventListener('resize', handleResize);
                 };
             }
-
+            
             return () => {
                 window.removeEventListener('resize', handleResize);
             };
@@ -376,7 +376,7 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
     const handleSelect = (optionValue: string) => {
         if (!isScrolling) {
             onChange(optionValue);
-
+            
             // Para Android: usar setTimeout para evitar el salto visual
             if (isAndroid) {
                 setTimeout(() => {
@@ -426,13 +426,13 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
         if (!isScrolling && touchDuration < maxDuration) {
             e.preventDefault();
             e.stopPropagation();
-
+            
             // Para Android: prevenir cualquier comportamiento de rebote
             if (isAndroid) {
                 e.nativeEvent.preventDefault();
                 e.nativeEvent.stopImmediatePropagation();
             }
-
+            
             handleSelect(optionValue);
         }
 
@@ -467,8 +467,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     e.preventDefault();
                     handleToggle();
                 }}
-                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-300 rounded-lg sm:rounded-xl flex items-center justify-between cursor-pointer transition-all ${disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'hover:border-blue-400'
-                    } ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
+                className={`w-full px-3 sm:px-4 py-2.5 sm:py-3 bg-white border border-gray-300 rounded-lg sm:rounded-xl flex items-center justify-between cursor-pointer transition-all ${
+                    disabled ? 'bg-gray-100 cursor-not-allowed text-gray-500' : 'hover:border-blue-400'
+                } ${isOpen ? 'ring-2 ring-blue-500 border-blue-500' : ''}`}
             >
                 <div className="flex items-center gap-1.5 sm:gap-2 flex-1">
                     {icon && <span className="text-gray-600 text-sm sm:text-base">{icon}</span>}
@@ -483,8 +484,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                 <>
                     {/* Overlay mejorado para Android */}
                     <div
-                        className={`fixed inset-0 z-40 md:hidden ${isAndroid ? 'bg-black/25' : 'bg-black/20'
-                            }`}
+                        className={`fixed inset-0 z-40 md:hidden ${
+                            isAndroid ? 'bg-black/25' : 'bg-black/20'
+                        }`}
                         onClick={() => {
                             if (isAndroid) {
                                 setTimeout(() => {
@@ -522,10 +524,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                     />
 
                     {/* Dropdown */}
-                    <div className={`absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden ${(isKeyboardOpen && !isAndroid)
+                    <div className={`absolute z-50 w-full mt-1 sm:mt-2 bg-white border border-gray-200 rounded-lg sm:rounded-xl shadow-lg overflow-hidden ${
+                        (isKeyboardOpen && !isAndroid)
                             ? 'fixed top-4 left-4 right-4 z-[9999] max-h-[40vh]'
                             : 'max-h-60 sm:max-h-64'
-                        }`}>
+                    }`}>
                         {/* Campo de búsqueda */}
                         <div className="p-2 border-b border-gray-200 bg-white sticky top-0 z-10">
                             <input
@@ -544,8 +547,9 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                         {/* Lista scrolleable con prevención de propagación mejorada */}
                         <div
                             ref={scrollableRef}
-                            className={`overflow-y-auto ${(isKeyboardOpen && !isAndroid) ? 'max-h-[30vh]' : 'max-h-48 sm:max-h-52'
-                                }`}
+                            className={`overflow-y-auto ${
+                                (isKeyboardOpen && !isAndroid) ? 'max-h-[30vh]' : 'max-h-48 sm:max-h-52'
+                            }`}
                             style={{
                                 WebkitOverflowScrolling: 'touch',
                                 overscrollBehavior: 'contain',
@@ -579,10 +583,11 @@ const CustomSelect: React.FC<CustomSelectProps> = ({
                                         onTouchEnd={(e) => {
                                             handleTouchEndOption(e, option.value);
                                         }}
-                                        className={`px-3 sm:px-4 py-3 sm:py-4 cursor-pointer transition-colors text-sm sm:text-base select-none ${option.value === value
+                                        className={`px-3 sm:px-4 py-3 sm:py-4 cursor-pointer transition-colors text-sm sm:text-base select-none ${
+                                            option.value === value
                                                 ? 'bg-green-50 text-gray-900 font-medium'
                                                 : 'hover:bg-gray-50 text-gray-700 active:bg-blue-50'
-                                            }`}
+                                        }`}
                                         style={{
                                             touchAction: 'manipulation',
                                             userSelect: 'none',

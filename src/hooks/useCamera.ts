@@ -36,6 +36,37 @@ export const useCamera = () => {
         }
     };
 
+    // const captureFrameForValidation = async () => {
+    //     if (photoFrozen || !videoRef.current || !canvasRef.current || isProcessingFrame) return;
+
+    //     const video = videoRef.current;
+    //     const canvas = canvasRef.current;
+
+    //     try {
+    //         // 🔥 MEJORADO: Usar dimensiones reales del video para máxima calidad
+    //         const w = video.videoWidth || 1920;
+    //         const h = video.videoHeight || 1080;
+            
+    //         canvas.width = w;
+    //         canvas.height = h;
+
+    //         const ctx = canvas.getContext("2d");
+    //         if (!ctx) return;
+
+    //         // 🔥 MEJORADO: Configurar contexto para máxima calidad
+    //         ctx.imageSmoothingEnabled = true;
+    //         ctx.imageSmoothingQuality = 'high';
+            
+    //         ctx.drawImage(video, 0, 0, w, h);
+            
+    //         // 🔥 MEJORADO: Calidad JPEG al 95% (mejor que 80%)
+    //         const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
+
+    //         await validateFaceWithEndpoint(dataUrl);
+    //     } catch (error) {
+    //         console.error('Error al capturar frame:', error);
+    //     }
+    // };
     const captureFrameForValidation = async () => {
         if (photoFrozen || !videoRef.current || !canvasRef.current || isProcessingFrame) return;
 
@@ -53,11 +84,19 @@ export const useCamera = () => {
             const ctx = canvas.getContext("2d");
             if (!ctx) return;
 
-            // 🔥 MEJORADO: Configurar contexto para máxima calidad
+            // MEJORADO: Configurar contexto para máxima calidad
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
-            
-            ctx.drawImage(video, 0, 0, w, h);
+
+            // NUEVO: Voltear horizontalmente si es cámara frontal (corregir efecto espejo)
+            if (facingMode === 'user') {
+                ctx.save();
+                ctx.scale(-1, 1);
+                ctx.drawImage(video, -w, 0, w, h);
+                ctx.restore();
+            } else {
+                ctx.drawImage(video, 0, 0, w, h);
+            }
             
             // 🔥 MEJORADO: Calidad JPEG al 95% (mejor que 80%)
             const dataUrl = canvas.toDataURL("image/jpeg", 0.95);

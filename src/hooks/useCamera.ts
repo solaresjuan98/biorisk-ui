@@ -43,7 +43,7 @@ export const useCamera = () => {
     //     const canvas = canvasRef.current;
 
     //     try {
-    //         // 🔥 MEJORADO: Usar dimensiones reales del video para máxima calidad
+    //         // Usar dimensiones reales del video para máxima calidad
     //         const w = video.videoWidth || 1920;
     //         const h = video.videoHeight || 1080;
 
@@ -53,13 +53,15 @@ export const useCamera = () => {
     //         const ctx = canvas.getContext("2d");
     //         if (!ctx) return;
 
-    //         // 🔥 MEJORADO: Configurar contexto para máxima calidad
+    //         // Configurar contexto para máxima calidad
     //         ctx.imageSmoothingEnabled = true;
     //         ctx.imageSmoothingQuality = 'high';
 
+    //         // CORREGIDO: Siempre capturar en orientación natural
+    //         // El video puede verse como espejo, pero la foto debe ser normal
     //         ctx.drawImage(video, 0, 0, w, h);
 
-    //         // 🔥 MEJORADO: Calidad JPEG al 95% (mejor que 80%)
+    //         // Calidad JPEG al 95%
     //         const dataUrl = canvas.toDataURL("image/jpeg", 0.95);
 
     //         await validateFaceWithEndpoint(dataUrl);
@@ -67,6 +69,8 @@ export const useCamera = () => {
     //         console.error('Error al capturar frame:', error);
     //     }
     // };
+    
+    
     const captureFrameForValidation = async () => {
         if (photoFrozen || !videoRef.current || !canvasRef.current || isProcessingFrame) return;
 
@@ -88,9 +92,19 @@ export const useCamera = () => {
             ctx.imageSmoothingEnabled = true;
             ctx.imageSmoothingQuality = 'high';
 
-            // CORREGIDO: Siempre capturar en orientación natural
-            // El video puede verse como espejo, pero la foto debe ser normal
-            ctx.drawImage(video, 0, 0, w, h);
+            // COMPORTAMIENTO SELFIE: Voltear horizontalmente si es cámara frontal
+            // Esto hace que la foto final coincida con lo que ve el usuario en el preview
+            console.log(facingMode);
+            
+            if (facingMode === 'user') {
+                ctx.save();
+                ctx.scale(-1, 1);
+                ctx.drawImage(video, -w, 0, w, h);
+                ctx.restore();
+            } else {
+                // Cámara trasera: capturar normalmente
+                ctx.drawImage(video, 0, 0, w, h);
+            }
 
             // Calidad JPEG al 95%
             const dataUrl = canvas.toDataURL("image/jpeg", 0.95);

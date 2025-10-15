@@ -685,6 +685,11 @@ export const ClientForm: React.FC<ClientFormProps> = ({
         if (mode === 'upload' && isCameraOpen) {
             closeCamera();
         }
+
+        // Si se cambia a cámara y no está abierta, abrirla
+        if (mode === 'camera' && !isCameraOpen) {
+            openCamera();
+        }
     };
 
     // Manejar la subida de archivos por drag & drop
